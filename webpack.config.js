@@ -21,7 +21,8 @@ module.exports = (_, { mode }) => {
     },
     resolve: {
       alias: {
-        svelte: path.resolve('node_modules', 'svelte')
+        svelte: path.resolve('node_modules', 'svelte'),
+        shared: path.resolve('src', 'shared')
       },
       extensions: [ '.ts', '.mjs', '.js', '.svelte' ],
       mainFields: [ 'svelte', 'browser', 'module', 'main' ]

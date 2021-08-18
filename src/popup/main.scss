@@ -7,3 +7,9 @@
 body {
   min-width: 400px;
 }
+
+.box {
+  display: block;
+  height: 2.65rem;
+  box-sizing: content-box;
+}

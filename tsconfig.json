@@ -1,7 +1,11 @@
 {
   "extends": "@tsconfig/svelte/tsconfig.json",
   "compilerOptions": {
-    "isolatedModules": false
+    "isolatedModules": false,
+    "baseUrl": "./",
+    "paths": {
+      "shared": [ "src/shared" ]
+    }
   },
   "include": [ "./src/**/*.ts" ],
   "exclude": [ "node_modules" ]
