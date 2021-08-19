@@ -6,9 +6,11 @@
   const emptyGIF = `data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7`;
 
   // @ts-ignore beacuse TS doesn't seem to recognize experimental new UA testing
-  const showIn = (navigator.userAgentData)           // @ts-ignore next line too
-    ? /mac/i.test(navigator.userAgentData.platform) ? 'Finder' : 'folder'
-    : /mac/i.test(navigator.platform) ? 'Finder' : 'folder';
+  const showIn = (navigator.userAgentData) // @ts-ignore next line too
+    ? /mac/i.test(navigator.userAgentData.platform) ? 'macos' : 'folder'
+    : /mac/i.test(navigator.platform) ? 'macos' : 'folder';
+
+  const folderOrFinder = bodyText(`location_${showIn}`);
 
   const dispatch = createEventDispatcher<{
     'erase': number,  // id
@@ -65,25 +67,25 @@
   }
 </script>
 
-<li class="download { state }">
+<li class="download { state }" role="button" tabindex="0" on:click={open}>
   <img src={image} width="32" height="32" alt="" aria-hidden="true" />
 
-  <div class="body" role="button" on:click={open}>
+  <div class="body">
 
     <span class="title">{ title }</span>
 
     <div class="controls">
       <span class="file-size">{ bytes }</span>
       {#if item.exists}
-        <span class="action" role="button" on:click|stopPropagation={show}>
-          { bodyText('show_in', showIn) }
+        <span class="action" role="button" tabindex="0" on:click|stopPropagation={show}>
+          { bodyText('show_in', folderOrFinder) }
         </span>
       {:else if state != 'complete'} <!-- !exists and also not complete -->
-        <span class="action" role="button" on:click|stopPropagation={retry}>
+        <span class="action" role="button" tabindex="0" on:click|stopPropagation={retry}>
           { bodyText('download_again') }
         </span>
       {/if}
-      <span class="action" role="button" on:click|stopPropagation={erase}>
+      <span class="action" role="button" tabindex="0" on:click|stopPropagation={erase}>
         { bodyText('erase_item') }
       </span>
     </div>
@@ -94,18 +96,95 @@
 <style lang="scss">
 .download {
   display: grid;
-  grid-template-columns: 4em 1fr;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.95em;
 
-  box-sizing: border-box;
-  height: 3.25rem;
-
-  --status-color: transparent;
+  --status-color: transparent; // fallback
 
   &.paused { --status-color: #ffcc00; }
   &.complete { --status-color: #65ce46; }
   &.in-progress { --status-color: #52b4ff; }
   &.interrupted, &.deleted { --status-color: #f77878; }
 
-  border-left: 0.35em solid var(--status-color);
+  border-radius: 0 0.25em 0.25em 0;
+  border: 0.20em solid transparent;
+  border-left: 0.35em solid var(--status-color) !important;
+
+  margin-bottom: 0.15em;
+
+  cursor: pointer;
+
+  >img {
+    align-self: flex-start;
+    justify-self: flex-end;
+    margin: 0.85em 0 0.35em 0.90em;
+  }
+
+  .body {
+    padding: 0.85em 1.25em 0.90em 0;
+    height: 2.75rem;
+
+    display: flex;
+    flex-flow: column nowrap;
+  }
+
+  .title {
+    font-weight: bold;
+    color: var(--color-title);
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  &.interrupted, &.deleted {
+    >img { filter: grayscale(1); }
+
+    .title {
+      opacity: 0.75;
+      text-decoration-line: line-through;
+    }
+  }
+
+  .controls {
+    margin-top: auto;
+
+    display: flex;
+    flex-flow: row nowrap;
+    >:first-child { margin-left: 0; }
+    >:last-child { margin-right: 0; }
+  }
+
+  .file-size {
+    margin-right: auto;
+    color: #999;
+  }
+
+  .action {
+    margin: 0 0.75em;
+    color: var(--color-action);
+    padding-top: 0.10em;
+    border-bottom: 0.10em solid transparent;
+
+    &:hover, &:active {
+      color: var(--color-action-hover);
+      border-bottom: 0.10em solid var(--color-background-accent);
+    }
+
+    &:active {
+      border-bottom: 0.10em solid var(--color-background-accent-hover);
+    }
+  }
+
+  background-color: #ffffff;
+  &:nth-child(2n+1) { background-color: #f8f8f8; }
+
+  &:hover, &:active {
+    background-color: var(--color-background-hover);
+    border-color: var(--color-border-hover);
+    .title { color: var(--color-title-hover); }
+  }
+
+  &:active { background-color: var(--color-background-active); }
 }
 </style>

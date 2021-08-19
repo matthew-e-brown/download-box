@@ -131,7 +131,7 @@
   <div id="page-buttons">
     <button type="button" on:click={prevPage}>{ bodyText('next_page') }</button>
     <button type="button" on:click={nextPage}>{ bodyText('prev_page') }</button>
-    <div>{ bodyText('page_number', pageNumber) }</div>
+    <div>{ bodyText('page_number', pageNumber.toString()) }</div>
   </div>
 
   <div id="show-all">
@@ -143,6 +143,16 @@
 </main>
 
 <style lang="scss">
+  h1, #page-buttons div {
+    cursor: default;
+  }
+
+  h1 {
+    text-align: center;
+    font-weight: 500;
+    font-size: 1.15rem;
+  }
+
   ul {
     display: block;
 

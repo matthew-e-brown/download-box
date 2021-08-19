@@ -4,7 +4,28 @@
   font-size: 16px;
 }
 
+:root {
+  --color-title: #555;
+  --color-title-hover: #0577c9;
+
+  --color-action: #777;
+  --color-action-hover: #0073c0;
+
+  --color-file-size: #999;
+
+  --color-background-1: #fff;
+  --color-background-2: #f8f8f8;
+  --color-background-hover: #f0f8ff;
+  --color-background-active: #dff5ff;
+
+  --color-border-hover: #87ceeb73;
+
+  --color-background-accent: #d0d0d0;
+  --color-background-accent-hover: #aaa;
+}
+
 body {
   margin: 0;
   width: 420px; // nice
+  user-select: none;
 }
