@@ -37,5 +37,9 @@
     "placeholders": {
       "num": { "content": "$1" }
     }
+  },
+
+  "no_downloads": {
+    "message": "There's nothing here..."
   }
 }
