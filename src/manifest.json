@@ -2,6 +2,8 @@
   "manifest_version": 3,
   "name": "Download Box",
 
+  "default_locale": "en",
+
   "action": {
     "default_title": "Downloads",
     "default_popup": "popup.html"

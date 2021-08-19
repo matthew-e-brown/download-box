@@ -61,6 +61,7 @@ module.exports = (_, { mode }) => {
       }),
       new CopyWebpackPlugin({
         patterns: [
+          { from: '_locales', to: '_locales' },
           // { from: 'assets', to: 'assets', },
           { from: 'popup/popup.html', to: 'popup.html' },
           {
