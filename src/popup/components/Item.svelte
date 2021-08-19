@@ -5,6 +5,7 @@
   // ===== Props =====
   export let item: chrome.downloads.DownloadItem;
 
+
   // ===== Methods =====
   const basename = (path: string): string => {
     // Check if using '\' or '/' for Windows vs. *nix
@@ -12,6 +13,7 @@
     const filename = path.substring(path.lastIndexOf(separator) + 1);
     return filename.replace(/\.crdownload$/, '');
   }
+
 
   // https://stackoverflow.com/a/18650828/10549827
   const formatSize = (bytes: number): string => {
@@ -24,6 +26,7 @@
 
     return `${(bytes / Math.pow(k, i)).toFixed(2)} ${s[i]}`;
   }
+
 
   const open = () => chrome.downloads.open(item.id);
   const show = () => chrome.downloads.show(item.id);
