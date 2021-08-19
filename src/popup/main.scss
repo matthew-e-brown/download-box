@@ -1,5 +1,3 @@
-$box-height: 3.35rem;
-
 :root {
   font-family: sans-serif;
   font-weight: 400;
@@ -9,10 +7,4 @@ $box-height: 3.35rem;
 body {
   margin: 0;
   width: 420px; // nice
-}
-
-.box {
-  box-sizing: border-box;
-  height: $box-height;
-  display: block;
 }

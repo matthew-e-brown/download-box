@@ -1,5 +1,8 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import Item from './components/Item.svelte';
+
+  // ===== Data =====
 
   const search = (query: chrome.downloads.DownloadQuery) => {
     return new Promise<chrome.downloads.DownloadItem[]>(resolve => {
@@ -16,22 +19,43 @@
   let items: chrome.downloads.DownloadItem[] = [ ];
 
   // Keep track of each page's start times (we can go forward by starting the
-  // next page after the last item on the current page, but starting the
-  // previous page after the first item in this page and searching for 5 items
+  // next page *before* the last item on the current page, but starting the
+  // previous page *after* the first item in this page and searching for 5 items
   // will simply give us the first five)
   let timeStack: string[] = [ ];
   $: pageNumber = timeStack.length + 1;
 
-  // Initialize items
-  search({ ...searchOptions }).then(array => items = array);
+  // ===== Helper functions =====
 
-  // The new "previous page" will be made of items from before X time: when we
-  // go to the next page, keep track of the start time of the first item on the
-  // current page so we know what time to start it at when we come back to it
-  const getStartTime = (item: chrome.downloads.DownloadItem) => {
+  /**
+   * Gets the ISO 8601 datestring for a given item, plus one millisecond. Used
+   * for starting a page at that given item. If nothing is passed, the current
+   * time's datestring is returned instead: used for starting at the first page.
+   *
+   * @param item The item to get the datestring from.
+   * @returns An 8601 datestring.
+   *
+   * @note The +1ms comes from the fact that we start pages by querying with the
+   * 'starts *before*' parameter: if we pass the exact time, the desired item
+   * will be excluded.
+   */
+  const getStartTime = (item?: chrome.downloads.DownloadItem) => {
+    // if they pass nothing just return the current time
+    if (!item) return (new Date()).toISOString();
     // since it starts "before" the passed time, we add one millisecond to it
     return (new Date(new Date(item.startTime).getTime() + 1)).toISOString();
   }
+
+  /**
+   * Refresh the current list of items to update Svelte's view of them and
+   * propagate to components. Does not change the current page.
+   */
+  const refreshItems = () => search({
+    ...searchOptions,
+    startedBefore: getStartTime(items.length ? items[0] : undefined)
+  }).then<void>(array => void (items = array));
+
+  // ===== Methods / event listeners =====
 
   const nextPage = async () => {
     const startedBefore = items[items.length - 1].startTime;
@@ -60,13 +84,15 @@
     chrome.downloads.erase({ id: toRemove }, async () => {
       // ('items' hasn't been updatd yet when this callback runs)
 
-      let startedBefore = (new Date()).toISOString();
+      let startedBefore: string;
       const index = items.findIndex(({ id }) => id == toRemove);
 
       // if this isn't the first page and they erased the first item, re-start
       // the page at what is currently the second item
       if (timeStack.length && index == 0) {
         startedBefore = getStartTime(items[1]);
+      } else {
+        startedBefore = getStartTime();
       }
 
       // Refresh the items with the new time
@@ -74,29 +100,45 @@
     });
   }
 
+  const retryItem = ({ detail: url }: CustomEvent<string>) => {
+    chrome.downloads.download({ url }, refreshItems);
+  }
+
   const openDownloads = () => chrome.tabs.create({ url: 'chrome://downloads' });
+
+  // ===== Setup / initialization =====
+
+  refreshItems(); // Initialize items
+
+  const onChanged = (change: chrome.downloads.DownloadDelta) => {
+    if (items.find(({ id }) => change.id == id)) return;
+    else refreshItems();
+  }
+
+  chrome.downloads.onChanged.addListener(onChanged);
+  onDestroy(() => chrome.downloads.onChanged.removeListener(onChanged));
 </script>
 
 <main>
   <h1>Downloads</h1>
 
   {#if items.length}
-    <ul>
+    <ul id="download-list">
       {#each items as item}
-        <Item {item} on:erase={eraseItem} />
+        <Item {item} on:erase={eraseItem} on:retry={retryItem} />
       {/each}
     </ul>
   {:else}
     <div id="empty">There are no downloads in here...</div>
   {/if}
 
-  <div id="page-buttons" class="box">
+  <div id="page-buttons">
     <button type="button" on:click={prevPage}>Previous page</button>
     <button type="button" on:click={nextPage}>Next page</button>
     <div>Page { pageNumber }</div>
   </div>
 
-  <div class="box">
+  <div id="show-all">
     <a
       href="chrome://downloads" target="_blank"
       on:click|preventDefault={openDownloads}
