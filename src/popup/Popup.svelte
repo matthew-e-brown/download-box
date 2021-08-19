@@ -1,16 +1,11 @@
 <script lang="ts">
-  import { searchDownloads } from '../shared';
-
   import Item from './components/Item.svelte';
 
-  let items: chrome.downloads.DownloadItem[] = [ ];
-
-  // Keep track of each page's start times (we can go forward by starting the
-  // next page after the last item on the current page, but starting the
-  // previous page after the first item in this page and searching for 5 items
-  // will simply give us the first five)
-  let startTimeStack: string[] = [ ];
-  $: pageNumber = startTimeStack.length + 1;
+  const search = (query: chrome.downloads.DownloadQuery) => {
+    return new Promise<chrome.downloads.DownloadItem[]>(resolve => {
+      chrome.downloads.search(query, resolve);
+    });
+  }
 
   const searchOptions = {
     limit: 5,                   // five per page
@@ -18,40 +13,68 @@
     orderBy: [ '-startTime' ],  // sort by time, descending (most recent first)
   };
 
+  let items: chrome.downloads.DownloadItem[] = [ ];
+
+  // Keep track of each page's start times (we can go forward by starting the
+  // next page after the last item on the current page, but starting the
+  // previous page after the first item in this page and searching for 5 items
+  // will simply give us the first five)
+  let timeStack: string[] = [ ];
+  $: pageNumber = timeStack.length + 1;
+
   // Initialize items
-  searchDownloads({ ...searchOptions }).then(array => items = array);
+  search({ ...searchOptions }).then(array => items = array);
+
+  // The new "previous page" will be made of items from before X time: when we
+  // go to the next page, keep track of the start time of the first item on the
+  // current page so we know what time to start it at when we come back to it
+  const getStartTime = (item: chrome.downloads.DownloadItem) => {
+    // since it starts "before" the passed time, we add one millisecond to it
+    return (new Date(new Date(item.startTime).getTime() + 1)).toISOString();
+  }
 
   const nextPage = async () => {
     const startedBefore = items[items.length - 1].startTime;
-    const newItems = await searchDownloads({ ...searchOptions, startedBefore });
+    const newItems = await search({ ...searchOptions, startedBefore });
 
     // Paginate only if there are older downloads
     if (newItems.length) {
-      // The new "previous page" is made of items from before X time: start it
-      // *before* the startTime of the first item on the this page, so we
-      // add one millisecond
-      const beforeTime = new Date((new Date(items[0].startTime).getTime()) + 1);
-      startTimeStack = [ ...startTimeStack, beforeTime.toISOString() ];
+      timeStack = [ ...timeStack, getStartTime(items[0]) ];
       items = newItems;
     }
   }
 
   const prevPage = async () => {
-    const startedBefore = startTimeStack.pop();
-
+    const startedBefore = timeStack.pop();
     // Don't paginate if we are on the first page
     if (startedBefore === undefined) return;
 
-    startTimeStack = startTimeStack; // trigger reaction to 'pop'
+    timeStack = timeStack; // trigger reaction to 'pop'
 
-    // Don't need to check length, we know from the stack having items that
-    // there are items in it
-    items = await searchDownloads({ ...searchOptions, startedBefore });
+    // Don't need to check length, we know from the stack having items in it
+    // that there are previous download-items in the query result
+    items = await search({ ...searchOptions, startedBefore });
   }
 
-  const showAllDownloads = () => {
-    chrome.tabs.create({ url: 'chrome://downloads' });
+  const eraseItem = ({ detail: toRemove }: CustomEvent<number>) => {
+    chrome.downloads.erase({ id: toRemove }, async () => {
+      // ('items' hasn't been updatd yet when this callback runs)
+
+      let startedBefore = (new Date()).toISOString();
+      const index = items.findIndex(({ id }) => id == toRemove);
+
+      // if this isn't the first page and they erased the first item, re-start
+      // the page at what is currently the second item
+      if (timeStack.length && index == 0) {
+        startedBefore = getStartTime(items[1]);
+      }
+
+      // Refresh the items with the new time
+      items = await search({ ...searchOptions, startedBefore });
+    });
   }
+
+  const openDownloads = () => chrome.tabs.create({ url: 'chrome://downloads' });
 </script>
 
 <main>
@@ -59,7 +82,9 @@
 
   {#if items.length}
     <ul>
-      {#each items as item} <Item {item} /> {/each}
+      {#each items as item}
+        <Item {item} on:erase={eraseItem} />
+      {/each}
     </ul>
   {:else}
     <div id="empty">There are no downloads in here...</div>
@@ -74,7 +99,7 @@
   <div class="box">
     <a
       href="chrome://downloads" target="_blank"
-      on:click|preventDefault={showAllDownloads}
+      on:click|preventDefault={openDownloads}
     >Show all downloads</a>
   </div>
 </main>
