@@ -1,14 +1,10 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
+  import { bodyText, search } from 'shared';
+
   import Item from './components/Item.svelte';
 
   // ===== Data =====
-
-  const search = (query: chrome.downloads.DownloadQuery) => {
-    return new Promise<chrome.downloads.DownloadItem[]>(resolve => {
-      chrome.downloads.search(query, resolve);
-    });
-  }
 
   const searchOptions = {
     limit: 5,                   // five per page
@@ -120,7 +116,7 @@
 </script>
 
 <main>
-  <h1>Downloads</h1>
+  <h1>{ bodyText('header') }</h1>
 
   {#if items.length}
     <ul id="download-list">
@@ -129,20 +125,20 @@
       {/each}
     </ul>
   {:else}
-    <div id="empty">There are no downloads in here...</div>
+    <div id="empty">{ bodyText('no_downloads') }</div>
   {/if}
 
   <div id="page-buttons">
-    <button type="button" on:click={prevPage}>Previous page</button>
-    <button type="button" on:click={nextPage}>Next page</button>
-    <div>Page { pageNumber }</div>
+    <button type="button" on:click={prevPage}>{ bodyText('next_page') }</button>
+    <button type="button" on:click={nextPage}>{ bodyText('prev_page') }</button>
+    <div>{ bodyText('page_number', pageNumber) }</div>
   </div>
 
   <div id="show-all">
     <a
       href="chrome://downloads" target="_blank"
       on:click|preventDefault={openDownloads}
-    >Show all downloads</a>
+    >{ bodyText('show_all') }</a>
   </div>
 </main>
 

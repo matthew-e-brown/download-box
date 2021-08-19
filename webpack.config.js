@@ -8,6 +8,9 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const sveltePreprocess = require('svelte-preprocess');
 
 module.exports = (_, { mode }) => {
+  /**
+   * @type {import('webpack').Configuration}
+   */
   const config = {
     context: path.resolve(__dirname, 'src'),
     entry: {
@@ -17,7 +20,8 @@ module.exports = (_, { mode }) => {
     },
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: '[name].js'
+      filename: '[name].js',
+      clean: true
     },
     resolve: {
       alias: {
@@ -61,6 +65,7 @@ module.exports = (_, { mode }) => {
       }),
       new CopyWebpackPlugin({
         patterns: [
+          { from: '_locales', to: '_locales' },
           // { from: 'assets', to: 'assets', },
           { from: 'popup/popup.html', to: 'popup.html' },
           {

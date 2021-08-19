@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { bodyText } from 'shared';
 
   // A blank, 1x1, transparent .gif file to use as a placeholder 'src' attribute
   const emptyGIF = `data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7`;
@@ -75,15 +76,15 @@
       <span class="file-size">{ bytes }</span>
       {#if item.exists}
         <span class="action" role="button" on:click|stopPropagation={show}>
-          Show in { showIn }
+          { bodyText('show_in', showIn) }
         </span>
       {:else if state != 'complete'} <!-- !exists and also not complete -->
         <span class="action" role="button" on:click|stopPropagation={retry}>
-          Restart download
+          { bodyText('download_again') }
         </span>
       {/if}
       <span class="action" role="button" on:click|stopPropagation={erase}>
-        Remove from list
+        { bodyText('erase_item') }
       </span>
     </div>
 
