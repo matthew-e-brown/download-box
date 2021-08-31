@@ -62,6 +62,7 @@
     state = !item.exists ? 'deleted' : item.state.replaceAll('_', '-');
 
     chrome.downloads.getFileIcon(item.id, { size: 32 }, src => {
+      console.log(`setting download ${item.id} to img-src ${src || 'emptyGIF'}`);
       image = (src || emptyGIF);
     });
   }
@@ -163,16 +164,16 @@
   .action {
     margin: 0 0.75em;
     color: var(--color-action);
-    padding-top: 0.10em;
+    padding: 0.10em 0.10em 0;
     border-bottom: 0.10em solid transparent;
 
     &:hover, &:active {
       color: var(--color-action-hover);
-      border-bottom: 0.10em solid var(--color-background-accent);
+      border-bottom-color: var(--color-background-accent);
     }
 
     &:active {
-      border-bottom: 0.10em solid var(--color-background-accent-hover);
+      border-bottom-color: var(--color-background-accent-hover);
     }
   }
 

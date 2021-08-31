@@ -19,7 +19,9 @@
   // previous page *after* the first item in this page and searching for 5 items
   // will simply give us the first five)
   let timeStack: string[] = [ ];
+
   $: pageNumber = timeStack.length + 1;
+  let totalPages = 0;
 
   // ===== Helper functions =====
 
@@ -46,10 +48,18 @@
    * Refresh the current list of items to update Svelte's view of them and
    * propagate to components. Does not change the current page.
    */
-  const refreshItems = () => search({
-    ...searchOptions,
-    startedBefore: getStartTime(items.length ? items[0] : undefined)
-  }).then<void>(array => void (items = array));
+  const refreshItems = () => {
+    // Also check the total number of downloads so we can get the page number
+    search({
+      limit: 0,
+      filenameRegex: '.+',
+    }).then(array => totalPages = Math.ceil(array.length / 5));
+
+    return search({
+      ...searchOptions,
+      startedBefore: getStartTime(items.length ? items[0] : undefined)
+    }).then(array => items = array);
+  };
 
   // ===== Methods / event listeners =====
 
@@ -129,9 +139,18 @@
   {/if}
 
   <div id="page-buttons">
-    <button type="button" on:click={prevPage}>{ bodyText('next_page') }</button>
-    <button type="button" on:click={nextPage}>{ bodyText('prev_page') }</button>
-    <div>{ bodyText('page_number', pageNumber.toString()) }</div>
+    <button type="button" on:click={prevPage}>{ bodyText('prev_page') }</button>
+    <button type="button" on:click={nextPage}>{ bodyText('next_page') }</button>
+    <div>
+      {#if !totalPages}
+        { bodyText('page_number', pageNumber.toString()) }
+      {:else}
+        { bodyText('page_number_with_total', [
+          pageNumber.toString(),
+          totalPages.toString()
+        ]) }
+      {/if}
+    </div>
   </div>
 
   <div id="show-all">
@@ -159,6 +178,68 @@
     margin: 0;
     padding: 0;
     list-style-type: none;
+  }
+
+  #page-buttons div, #show-all {
+    text-align: center;
+    margin-top: 0.65rem;
+  }
+
+  #show-all { margin-bottom: 0.70rem; }
+
+  #page-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+
+    div {
+      grid-column: 1 / -1;
+      color: var(--color-action);
+    }
+
+    button {
+      margin: 0.15rem;
+      margin-bottom: 0;
+      padding: 0.85em 1.25em;
+      border: 0.20em solid transparent;
+      border-radius: 0.25em;
+
+      cursor: pointer;
+      font-weight: bold;
+
+      color: var(--color-title);
+      background-color: var(--color-background-2);
+
+      &:first-of-type { margin-left: 0; }
+      &:last-of-type { margin-right: 0; }
+
+      &:hover, &:active {
+        color: var(--color-title-hover);
+        border-color: var(--color-border-hover);
+        background-color: var(--color-background-hover);
+      }
+
+      &:active {
+        background-color: var(--color-background-active);
+      }
+    }
+  }
+
+  #show-all a {
+    color: var(--color-action);
+    text-decoration-line: none;
+
+    padding: 0.10em 0.10em 0;
+    border-bottom: 0.10em solid transparent;
+
+    &:hover, &:active {
+      color: var(--color-action-hover);
+      border-bottom-color: var(--color-background-accent);
+    }
+
+    &:active {
+      border-bottom-color: var(--color-background-accent-hover);
+    }
   }
 
   #empty {
