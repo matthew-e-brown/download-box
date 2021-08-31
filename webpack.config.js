@@ -15,7 +15,7 @@ module.exports = (_, { mode }) => {
     context: path.resolve(__dirname, 'src'),
     entry: {
       popup: './popup/index.ts',
-      content: './content/index.ts',
+      // content: './content/index.ts',
       background: './background/index.ts',
     },
     output: {

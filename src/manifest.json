@@ -2,6 +2,7 @@
   "manifest_version": 3,
   "name": "Download Box",
 
+  "minimum_chrome_version": "69",
   "default_locale": "en",
 
   "action": {
@@ -12,13 +13,6 @@
   "background": {
     "service_worker": "background.js"
   },
-
-  "content_scripts": [
-    {
-      "matches": [ "<all_urls>" ],
-      "js": [ "content.js" ]
-    }
-  ],
 
   "permissions": [
     "downloads", "downloads.open", "downloads.shelf"

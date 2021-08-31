@@ -19,9 +19,7 @@
   // previous page *after* the first item in this page and searching for 5 items
   // will simply give us the first five)
   let timeStack: string[] = [ ];
-
   $: pageNumber = timeStack.length + 1;
-  let totalPages = 0;
 
   // ===== Helper functions =====
 
@@ -48,17 +46,11 @@
    * Refresh the current list of items to update Svelte's view of them and
    * propagate to components. Does not change the current page.
    */
-  const refreshItems = () => {
-    // Also check the total number of downloads so we can get the page number
-    search({
-      limit: 0,
-      filenameRegex: '.+',
-    }).then(array => totalPages = Math.ceil(array.length / 5));
-
-    return search({
+  const refreshItems = async () => {
+    items = await search({
       ...searchOptions,
       startedBefore: getStartTime(items.length ? items[0] : undefined)
-    }).then(array => items = array);
+    });
   };
 
   // ===== Methods / event listeners =====
@@ -141,16 +133,7 @@
   <div id="page-buttons">
     <button type="button" on:click={prevPage}>{ bodyText('prev_page') }</button>
     <button type="button" on:click={nextPage}>{ bodyText('next_page') }</button>
-    <div>
-      {#if !totalPages}
-        { bodyText('page_number', pageNumber.toString()) }
-      {:else}
-        { bodyText('page_number_with_total', [
-          pageNumber.toString(),
-          totalPages.toString()
-        ]) }
-      {/if}
-    </div>
+    <div>{ bodyText('page_number', pageNumber.toString()) }</div>
   </div>
 
   <div id="show-all">

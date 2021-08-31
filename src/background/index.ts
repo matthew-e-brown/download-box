@@ -1,5 +1,6 @@
 import { search } from 'shared';
-import { drawNormalIcon, drawProgressIcon, States } from './draw-icon';
+import { States } from './colors';
+import { drawNormalIcon, drawProgressIcon } from './draw-icon';
 
 // Disable the shelf while this extension is loaded
 chrome.downloads.setShelfEnabled(false);
@@ -15,7 +16,7 @@ const refreshStatus = () => search({ state: 'in_progress' }).then(updateIcon);
  * occurs.
  * @param change The change-event from the chrome listener.
  */
-function waitForError(change: chrome.downloads.DownloadDelta) {
+function waitForChange(change: chrome.downloads.DownloadDelta) {
   if (change.state?.current == 'interrupted') state = States.Error;
   else if (change.paused?.current) state = States.Paused;
   else if (!change.paused?.current) state = States.Normal;
@@ -30,11 +31,13 @@ function endProgress() {
   if (interval !== null) {
     clearInterval(interval);
     interval = null;
-    chrome.downloads.onChanged.removeListener(waitForError);
+
+    chrome.downloads.onChanged.removeListener(waitForChange);
+
+    // Now that we're done, anything that was not an error means success
+    if (state != States.Error) state = States.Success;
   }
 
-  // Now that we're done, anything that was not an error means success
-  if (state != States.Error) state = States.Success;
   drawNormalIcon(state);
   resetColor = true; // next time they open the popup, reset the color
 }
@@ -53,9 +56,10 @@ function updateIcon(inProgress: chrome.downloads.DownloadItem[]) {
 
     // Start watching for updates
     if (interval === null) {
-      // @ts-ignore
-      interval = setInterval(refreshStatus, 500);
-      chrome.downloads.onChanged.addListener(waitForError);
+      state = States.Progress;
+      // cast because of TS thinking we want @types/node's setInterval
+      interval = setInterval(refreshStatus, 500) as unknown as number;
+      chrome.downloads.onChanged.addListener(waitForChange);
     }
   }
 
@@ -66,7 +70,9 @@ function updateIcon(inProgress: chrome.downloads.DownloadItem[]) {
 chrome.downloads.onCreated.addListener(refreshStatus);
 
 chrome.runtime.onMessage.addListener(message => {
-  if (resetColor && message == 'popup_opened') {
+  if (resetColor && message == 'downloader_popup_opened') {
     drawNormalIcon(state = States.Normal);
   }
 });
+
+refreshStatus();
