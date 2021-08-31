@@ -1,1 +1,1 @@
-console.log('content.ts');
+import './dark-mode';

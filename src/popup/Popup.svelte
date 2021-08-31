@@ -117,8 +117,8 @@
   refreshItems(); // Initialize items
 
   const onChanged = (change: chrome.downloads.DownloadDelta) => {
-    if (items.find(({ id }) => change.id == id)) return;
-    else refreshItems();
+    // If any of the items *on this page* changed, refresh their properties
+    if (items.find(({ id }) => change.id == id)) refreshItems();
   }
 
   chrome.downloads.onChanged.addListener(onChanged);

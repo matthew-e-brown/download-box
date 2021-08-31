@@ -97,7 +97,8 @@
 <style lang="scss">
 .download {
   display: grid;
-  grid-template-columns: auto 1fr;
+  // https://css-tricks.com/preventing-a-grid-blowout/
+  grid-template-columns: auto minmax(0, 1fr);
   column-gap: 0.95em;
 
   --status-color: transparent; // fallback
