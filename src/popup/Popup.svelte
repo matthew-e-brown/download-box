@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { bodyText, search } from 'shared';
+  import { bodyText, search, startInterval } from 'shared';
 
   import Item from './components/Item.svelte';
 
@@ -113,8 +113,26 @@
     if (items.find(({ id }) => change.id == id)) refreshItems();
   }
 
+  let stopTimer: (() => void) | null = null;
+  const checkForProgress = async () => {
+    const inProgress = await search({ state: 'in_progress' });
+    if (inProgress.length) {
+      refreshItems(); // this is perhaps a bit heavy-handed, but it should work?
+      if (!stopTimer) stopTimer = startInterval(500, checkForProgress);
+    } else if (!!stopTimer) {
+      stopTimer();
+      stopTimer = null;
+    }
+  }
+
   chrome.downloads.onChanged.addListener(onChanged);
-  onDestroy(() => chrome.downloads.onChanged.removeListener(onChanged));
+  chrome.downloads.onCreated.addListener(checkForProgress);
+  onDestroy(() => {
+    chrome.downloads.onChanged.removeListener(onChanged);
+    chrome.downloads.onCreated.removeListener(checkForProgress);
+  });
+
+  checkForProgress();
 </script>
 
 <main>

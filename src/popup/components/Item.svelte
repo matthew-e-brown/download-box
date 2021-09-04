@@ -38,7 +38,7 @@
     const k = 1000;
     const s = [ 'Bytes', 'KB', 'MB', 'GB', 'TB' ];
     const i = Math.floor(Math.log10(bytes) / Math.log10(k));
-    const p = i == 0 ? 0 : 2; // hide decimals if 'Bytes'
+    const p = i && 2; // 0 decimals if index is 0; no decimals for 'Bytes'
 
     return `${(bytes / Math.pow(k, i)).toFixed(p)} ${s[i]}`;
   }
@@ -55,16 +55,31 @@
   let image: string = emptyGIF;
   let state: string = '';
 
-  $: {
-    title = basename(item.filename);
-    bytes = formatSize(item.fileSize);
-    image = emptyGIF; // set to blank while the new one loads
-    state = !item.exists ? 'deleted' : item.state.replaceAll('_', '-');
+  $: title = basename(item.filename);
+  $: state = !item.exists ? 'deleted' : item.state.replaceAll('_', '-');
 
-    chrome.downloads.getFileIcon(item.id, { size: 32 }, src => {
-      console.log(`setting download ${item.id} to img-src ${src || 'emptyGIF'}`);
-      image = (src || emptyGIF);
-    });
+  $: if (item.state == 'in_progress') {
+    bytes = `${formatSize(item.bytesReceived)} / ${formatSize(item.totalBytes)}`
+  } else {
+    bytes = formatSize(item.fileSize);
+  }
+
+  $: chrome.downloads.getFileIcon(item.id, { size: 32 }, src => {
+    image = (src || emptyGIF);
+  });
+
+  let barRole: string | null = null;
+  let valueMin: number | null = null;
+  let valueMax: number | null = null;
+  let valueNow: number | null = null;
+
+  $: if (state == 'in-progress') {
+    barRole = 'progressbar';
+    valueMin = 0;
+    valueMax = 0;
+    valueNow = item.bytesReceived / item.totalBytes * 100;
+  } else {
+    valueMin = valueMax = valueNow = null;
   }
 </script>
 
@@ -75,13 +90,24 @@
 
     <span class="title">{ title }</span>
 
+    <div
+      class="progress"
+      class:hidden={item.state != 'in_progress'}
+      role={barRole}
+      aria-valuemin={valueMin}
+      aria-valuemax={valueMax}
+      aria-valuenow={valueNow}
+    >
+      <div class="bar" style="width: {valueNow}%"></div>
+    </div>
+
     <div class="controls">
       <span class="file-size">{ bytes }</span>
       {#if item.exists}
         <span class="action" role="button" tabindex="0" on:click|stopPropagation={show}>
           { bodyText('show_in', folderOrFinder) }
         </span>
-      {:else if state != 'complete'} <!-- !exists and also not complete -->
+      {:else if state != 'complete'} <!-- does not exist and also not 'complete'; deleted -->
         <span class="action" role="button" tabindex="0" on:click|stopPropagation={retry}>
           { bodyText('download_again') }
         </span>
@@ -128,6 +154,7 @@
 
     display: flex;
     flex-flow: column nowrap;
+    justify-content: space-between;
   }
 
   .title {
@@ -148,9 +175,22 @@
     }
   }
 
-  .controls {
-    margin-top: auto;
+  .progress {
+    height: 0.25em;
 
+    position: relative;
+    align-self: stretch;
+
+    .bar {
+      position: absolute;
+      top: 0; left: 0;
+      height: 100%;
+
+      background-color: var(--status-color);
+    }
+  }
+
+  .controls {
     display: flex;
     flex-flow: row nowrap;
     >:first-child { margin-left: 0; }
@@ -188,5 +228,10 @@
   }
 
   &:active { background-color: var(--color-background-active); }
+}
+
+.hidden {
+  opacity: 0;
+  visibility: hidden;
 }
 </style>

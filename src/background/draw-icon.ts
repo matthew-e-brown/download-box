@@ -1,8 +1,19 @@
-import { getColor, States } from './colors';
+/**
+ * The different states that can cause the colour of the icon to change
+ */
+export const enum States { Normal, Progress, Paused, Success, Error, };
+
+const colors = new Map<States, string>([
+  [ States.Normal,    '#5e5e5e' ],
+  [ States.Progress,  '#2566ff' ],
+  [ States.Paused,    '#ffff22' ],
+  [ States.Success,   '#0bbf29' ],
+  [ States.Error,     '#ff2222' ],
+]);
 
 const FS = 160;           // Full Size (w and h) of the icon sprite
 const BH = FS / 5;        // Bar Height, drawn when downloading
-const BS = 15;            // Bar Spacing, the distance between arrow and bar
+const BS = BH / 2;        // Bar Spacing, the distance between arrow and bar
 const AS = FS - BH - BS;  // Arrow Size, since arrow must shrink when bar shown
 
 const canvas = new OffscreenCanvas(FS, FS);
@@ -43,7 +54,7 @@ function drawArrow(x: number, y: number, w: number, h: number): Path2D {
 
 export function drawNormalIcon(state: States): void {
   context.clearRect(0, 0, FS, FS);
-  context.fillStyle = getColor(state);
+  context.fillStyle = colors.get(state);
   context.fill(drawArrow(0, 0, FS, FS));
 
   setAsIcon();
@@ -54,15 +65,14 @@ export function drawProgressIcon(percent: number, state: States): void {
 
   const xShift = (1 - AS / FS) / 2 * FS;
 
-  context.fillStyle = getColor(state);
+  context.fillStyle = colors.get(state);
   context.fill(drawArrow(xShift, 0, AS, AS));
 
   // always draw the loading bar's BG as normal colour
-  context.fillStyle = getColor(States.Normal);
+  context.fillStyle = colors.get(States.Normal);
   context.fillRect(0, AS + BS, FS, BS);
 
-  // always draw the loading bar's colour as progress
-  context.fillStyle = getColor(States.Progress);
+  context.fillStyle = colors.get(state);
   context.fillRect(0, AS + BS, FS * percent, BH);
 
   setAsIcon();
