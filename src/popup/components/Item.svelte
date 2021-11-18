@@ -68,10 +68,10 @@
     image = (src || emptyGIF);
   });
 
-  let barRole: string | null = null;
-  let valueMin: number | null = null;
-  let valueMax: number | null = null;
-  let valueNow: number | null = null;
+  let barRole: string | undefined = undefined;
+  let valueMin: number | undefined = undefined;
+  let valueMax: number | undefined = undefined;
+  let valueNow: number | undefined = undefined;
 
   $: if (state == 'in-progress') {
     barRole = 'progressbar';
@@ -79,7 +79,7 @@
     valueMax = 0;
     valueNow = item.bytesReceived / item.totalBytes * 100;
   } else {
-    valueMin = valueMax = valueNow = null;
+    barRole = valueMin = valueMax = valueNow = undefined;
   }
 </script>
 

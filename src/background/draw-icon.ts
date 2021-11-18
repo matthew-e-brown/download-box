@@ -11,13 +11,13 @@ const colors = new Map<States, string>([
   [ States.Error,     '#ff2222' ],
 ]);
 
-const FS = 160;           // Full Size (w and h) of the icon sprite
-const BH = FS / 5;        // Bar Height, drawn when downloading
-const BS = BH / 2;        // Bar Spacing, the distance between arrow and bar
-const AS = FS - BH - BS;  // Arrow Size, since arrow must shrink when bar shown
+const ICON_SIZE   =  160;                                   // Full Size (w and h) of the icon sprite
+const BAR_HEIGHT  =  ICON_SIZE / 5;                         // Bar Height, drawn when downloading
+const BAR_SPACE   =  BAR_HEIGHT / 2;                        // Bar Spacing, the distance between arrow and bar
+const ARROW_SIZE  =  ICON_SIZE - BAR_HEIGHT - BAR_SPACE;    // Arrow Size, since arrow must shrink when bar shown
 
-const canvas = new OffscreenCanvas(FS, FS);
-const context = canvas.getContext('2d');
+const canvas = new OffscreenCanvas(ICON_SIZE, ICON_SIZE);
+const context = canvas.getContext('2d')!; // '!', we are passing known valid context type
 
 /**
  * Draws an arrow onto a 2D Path
@@ -43,42 +43,48 @@ function drawArrow(x: number, y: number, w: number, h: number): Path2D {
   }));
 
   const path = new Path2D();
-  const start = points.shift();
+  const start = points.shift()!; // '!', we just created the array ourselves
 
   path.moveTo(start.x, start.y);
-  for (const point of points) path.lineTo(point.x, point.y);
+
+  for (const point of points)
+    path.lineTo(point.x, point.y);
+
   path.closePath();
 
   return path;
 }
 
 export function drawNormalIcon(state: States): void {
-  context.clearRect(0, 0, FS, FS);
-  context.fillStyle = colors.get(state);
-  context.fill(drawArrow(0, 0, FS, FS));
+  context.clearRect(0, 0, ICON_SIZE, ICON_SIZE);
+  context.fillStyle = colors.get(state) ?? colors.get(States.Normal)!;
+  context.fill(drawArrow(0, 0, ICON_SIZE, ICON_SIZE));
 
   setAsIcon();
 }
 
 export function drawProgressIcon(percent: number, state: States): void {
-  context.clearRect(0, 0, FS, FS);
+  const mainColor = colors.get(States.Normal)!;
+  const accentColor = colors.get(state) ?? colors.get(States.Progress)!;
 
-  const xShift = (1 - AS / FS) / 2 * FS;
+  context.clearRect(0, 0, ICON_SIZE, ICON_SIZE);
 
-  context.fillStyle = colors.get(state);
-  context.fill(drawArrow(xShift, 0, AS, AS));
+  const xShift = (1 - ARROW_SIZE / ICON_SIZE) / 2 * ICON_SIZE;
+
+  context.fillStyle = mainColor;
+  context.fill(drawArrow(xShift, 0, ARROW_SIZE, ARROW_SIZE));
 
   // always draw the loading bar's BG as normal colour
-  context.fillStyle = colors.get(States.Normal);
-  context.fillRect(0, AS + BS, FS, BS);
+  context.fillStyle = mainColor;
+  context.fillRect(0, ARROW_SIZE + BAR_SPACE, ICON_SIZE, BAR_HEIGHT);
 
-  context.fillStyle = colors.get(state);
-  context.fillRect(0, AS + BS, FS * percent, BH);
+  context.fillStyle = accentColor;
+  context.fillRect(0, ARROW_SIZE + BAR_SPACE, ICON_SIZE * percent, BAR_HEIGHT);
 
   setAsIcon();
 }
 
 function setAsIcon() {
-  const imageData = context.getImageData(0, 0, FS, FS);
+  const imageData = context.getImageData(0, 0, ICON_SIZE, ICON_SIZE);
   chrome.action.setIcon({ imageData });
 }

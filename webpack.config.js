@@ -1,16 +1,13 @@
 const path = require('path');
 
-const { version } = require('./package.json');
-
 const MiniCSSExtractPlugin = require('mini-css-extract-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 const sveltePreprocess = require('svelte-preprocess');
 
 module.exports = (_, { mode }) => {
-  /**
-   * @type {import('webpack').Configuration}
-   */
+
+  /** * @type {import('webpack').Configuration} */
   const config = {
     context: path.resolve(__dirname, 'src'),
     entry: {
@@ -44,6 +41,11 @@ module.exports = (_, { mode }) => {
           }
         }
       }, {
+        test: /node_modules\/svelte\/.*\.mjs$/,
+        resolve: {
+          fullySpecified: false,
+        }
+      }, {
         test: /\.ts$/,
         use: { loader: 'ts-loader' }
       }, {
@@ -72,15 +74,18 @@ module.exports = (_, { mode }) => {
             from: 'manifest.json', to: 'manifest.json',
             transform: string => {
               const content = JSON.parse(string);
-              content.version = version;
+              content.version = require('./package.json').version;
               return JSON.stringify(content, null, 2);
             }
           }
         ]
       })
     ]
-  }
+  };
 
+  // This line is *essential* because, by default, Webpack makes heavy use of
+  // 'eval', which is disallowed in Extensions. It's not very efficient, but the
+  // default devtool mode won't work at all.
   if (mode == 'development') config.devtool = 'cheap-module-source-map';
 
   return config;
