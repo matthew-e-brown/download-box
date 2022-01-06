@@ -1,20 +1,23 @@
 {
-  "manifest_version": 3,
   "name": "Download Box",
-
+  "version": "0.1.0",
+  
+  "manifest_version": 3,
   "minimum_chrome_version": "69",
   "default_locale": "en",
-
+  
   "action": {
-    "default_title": "Downloads",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_title": "Downloads"
   },
-
+  
   "background": {
     "service_worker": "background.js"
   },
-
+  
   "permissions": [
-    "downloads", "downloads.open", "downloads.shelf"
+    "downloads",
+    "downloads.open",
+    "downloads.shelf"
   ]
 }

@@ -1,45 +1,8 @@
 {
-  "header": {
+  "title": {
     "message": "ダウンロード"
   },
 
-  "download_again": {
-    "message": "再起動する"
-  },
-
-  "erase_item": {
-    "message": "除く"
-  },
-
-  "show_in": {
-    "message": "$location$で見る",
-    "placeholders": {
-      "location": {
-        "content": "$1",
-        "example": "Finder"
-      }
-    }
-  },
-
-  "location_folder": { "message": "フォルダー" },
-  "location_macos": { "message": "Finder" },
-
-  "show_all": {
-    "message": "すべてを見る",
-    "description": "The message shown for the button that opens chrome://downloads"
-  },
-
-  "prev_page": { "message": "前のページへ" },
-  "next_page": { "message": "次のページへ" },
-
-  "page_number": {
-    "message": "$num$ページ目",
-    "placeholders": {
-      "num": { "content": "$1" }
-    }
-  },
-
-  "no_downloads": {
-    "message": "ダウンロードがない…"
-  }
+  "prev_page": { "message": "前へ" },
+  "next_page": { "message": "次へ" }
 }
