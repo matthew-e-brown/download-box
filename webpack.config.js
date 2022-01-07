@@ -1,92 +1,85 @@
 const path = require('path');
 
-const MiniCSSExtractPlugin = require('mini-css-extract-plugin');
+const { DefinePlugin } = require('webpack');
+const { VueLoaderPlugin } = require('vue-loader');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
-
-const sveltePreprocess = require('svelte-preprocess');
 
 module.exports = (_, { mode }) => {
 
-  /** * @type {import('webpack').Configuration} */
+  /**
+  * @type {import('webpack').Configuration}
+  */
   const config = {
     context: path.resolve(__dirname, 'src'),
     entry: {
-      popup: './popup/index.ts',
-      // content: './content/index.ts',
-      background: './background/index.ts',
+      popup: './popup/main.ts',
+      background: './background/main.ts',
     },
     output: {
       path: path.resolve(__dirname, 'dist'),
       filename: '[name].js',
-      clean: true
+      clean: true,
     },
     resolve: {
       alias: {
-        svelte: path.resolve('node_modules', 'svelte'),
-        shared: path.resolve('src', 'shared')
+        '@': path.resolve(__dirname, 'src'),
       },
-      extensions: [ '.ts', '.mjs', '.js', '.svelte' ],
-      mainFields: [ 'svelte', 'browser', 'module', 'main' ]
+      extensions: [ '', '.ts', '.js' ]
     },
     module: {
-      rules: [{
-        test: /\.svelte$/,
-        use: {
-          loader: 'svelte-loader',
+      rules: [
+        {
+          test: /\.vue$/,
+          loader: 'vue-loader',
+        },
+        {
+          test: /\.(sa|sc|c)ss$/,
+          use: [
+            'vue-style-loader',
+            'css-loader',
+            'sass-loader',
+          ]
+        },
+        {
+          test: /\.ts$/,
+          loader: 'ts-loader',
           options: {
-            emitCss: true,
-            preprocess: sveltePreprocess({
-              scss: { renderSync: true }
-            })
+            transpileOnly: true,
+            appendTsSuffixTo: [ /\.vue$/ ],
           }
         }
-      }, {
-        test: /node_modules\/svelte\/.*\.mjs$/,
-        resolve: {
-          fullySpecified: false,
-        }
-      }, {
-        test: /\.ts$/,
-        use: { loader: 'ts-loader' }
-      }, {
-        test: /\.(sa|sc|c)ss$/,
-        use: [
-          'style-loader',
-          {
-            loader: MiniCSSExtractPlugin.loader,
-            options: { esModule: false }
-          },
-          'css-loader',
-          'sass-loader',
-        ]
-      }]
+      ]
     },
     plugins: [
-      new MiniCSSExtractPlugin({
-        filename: '[name].css'
+      new DefinePlugin({
+        __VUE_OPTIONS_API__: false,
+        __VUE_PROD_DEVTOOLS__: false,
       }),
+      new VueLoaderPlugin(),
       new CopyWebpackPlugin({
         patterns: [
-          { from: '_locales', to: '_locales' },
-          // { from: 'assets', to: 'assets', },
-          { from: 'popup/popup.html', to: 'popup.html' },
+          // { from: '_locales', to: '_locales' },
+          { from: 'static', to: '.' },
           {
-            from: 'manifest.json', to: 'manifest.json',
-            transform: string => {
-              const content = JSON.parse(string);
-              content.version = require('./package.json').version;
-              return JSON.stringify(content, null, 2);
+            from: 'manifest.json',
+            to: 'manifest.json',
+            transform: str => {
+              const manifest = JSON.parse(str);
+              manifest.version = require('./package.json').version;
+              return JSON.stringify(manifest, null, 2);
             }
-          }
-        ]
-      })
-    ]
+          },
+        ],
+      }),
+    ],
   };
 
-  // This line is *essential* because, by default, Webpack makes heavy use of
-  // 'eval', which is disallowed in Extensions. It's not very efficient, but the
-  // default devtool mode won't work at all.
-  if (mode == 'development') config.devtool = 'cheap-module-source-map';
+  /**
+   * @note This is *essential* because Webpack's production mode makes heavy use
+   * of `eval`, which is disallowed in Chrome Extensions.
+   */
+  if (mode == 'development')
+    config.devtool = 'inline-source-map';
 
   return config;
-};
+}
