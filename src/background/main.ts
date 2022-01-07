@@ -20,13 +20,16 @@ function main() {
   }
 
   async function tick() {
-    const inProgress = await search({ state: 'in_progress' });
+    const inProgress = await search({
+      state: 'in_progress',
+      filenameRegex: '.+',
+    });
 
-    if (inProgress.length > 0) {
+    if (inProgress.length == 0) {
+      stop();
+    } else {
       sendMessage(Message.ProgressTick);
       // TODO: draw the toolbar icon
-    } else {
-      stop();
     }
   }
 

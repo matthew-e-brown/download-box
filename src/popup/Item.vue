@@ -14,7 +14,7 @@
     </div>
 
     <div class="buttons">
-      <!-- First pair: if the item can be resumed or paused, offer to toggle -->
+      <!-- If the item can be resumed or paused, offer to toggle -->
       <button
         type="button"
         v-if="item.canResume"
@@ -25,7 +25,6 @@
         v-else-if="item.state == 'in_progress'"
         @click.stop="pauseDownload"
       ><fa-icon icon="pause" fixed-width /></button>
-      <!--  -->
 
       <!-- If the item has been deleted or interrupted, offer to retry -->
       <button
@@ -42,12 +41,12 @@
       ><fa-icon icon="folder-blank" fixed-width /></button>
     </div>
 
-    <div
+    <ProgressBar
       v-if="item.state == 'in_progress' || item.canResume"
-      class="progress-bar" :class="barColor"
-    >
-      <div></div>
-    </div>
+      :percent="item.bytesReceived / item.totalBytes"
+      gradient-start="#14415A"
+      gradient-end="#00A3FF"
+    />
 
   </li>
 </template>
@@ -60,6 +59,8 @@ import { formatSize, isMac } from '@/common';
 import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;
 import bodyText = chrome.i18n.getMessage;
+
+import ProgressBar from './Bar.vue';
 
 
 enum ItemState {
@@ -117,6 +118,7 @@ function useFileInfo(item: Ref<DownloadItem>) {
 
 export default defineComponent({
   name: 'Item',
+  components: { ProgressBar },
   props: {
     item: {
       type: Object as PropType<DownloadItem>,
@@ -183,6 +185,7 @@ export default defineComponent({
 .download-item {
   height: 75px;
   padding: 0 14px;
+  position: relative;
 
   border: 2px solid transparent;
   &:hover { border-color: var(--accent1); }
@@ -256,5 +259,10 @@ export default defineComponent({
     opacity: 0.45;
   }
 
+}
+
+::v-deep(.progress-bar) {
+  inset: -1px;
+  top: unset;
 }
 </style>
