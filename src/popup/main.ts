@@ -3,6 +3,7 @@ import { createApp } from 'vue';
 
 import 'normalize.css';
 import '@fontsource/atkinson-hyperlegible/400.css';
+import './main.scss';
 
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';

@@ -183,50 +183,6 @@ export default defineComponent({
 </script>
 
 
-<style lang="scss">
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  width: 420px;
-  user-select: none;
-
-  font-family: 'Atkinson Hyperlegible', sans-serif;
-  font-weight: 400;
-  font-size: 16px;
-
-  // Light theme:
-
-  // --bg: ;
-  // --fg: ;
-  // --item-bg1: ;
-  // --item-bg2: ;
-  // --button-bg1: ;
-  // --button-bg2: ;
-  // --hover-accent: ;
-
-  // Dark theme:
-
-  @media (prefers-color-scheme: dark) {
-    --bg: #202020;
-    --fg: #F9F9F9;
-    --item-bg1: #181818;
-    --item-bg2: #282828;
-    --button-bg1: #3F3F3F;
-    --button-bg2: #303030;
-    --accent1: #14415A;
-    --accent2: #00A3FF;
-  }
-
-  color: var(--fg);
-  background-color: var(--bg);
-}
-</style>
-
-
 <style lang="scss" scoped>
 h1 {
   font-size: 24px;
