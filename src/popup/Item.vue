@@ -1,36 +1,45 @@
 <template>
-  <li @click="openFile">
-    <img :src="icon" width="32" height="32" aria-hidden="true" alt="" />
-    <span class="name">{{ filename }}</span>
-    <span class="size">{{ filesize }}</span>
+  <li
+    role="button"
+    tabindex="0"
+    @click="openFile"
+    class="download-item"
+    :class="{ error: item.state == 'interrupted' || !item.exists }"
+  >
+    <img :src="icon" class="icon" width="32" height="32" aria-hidden="true" alt="" />
+
+    <div class="info">
+      <div class="name">{{ filename }}</div>
+      <div class="size">{{ filesize }}</div>
+    </div>
 
     <div class="buttons">
-      <!-- First pair: if the download can be resumed or paused, offer to toggle -->
+      <!-- First pair: if the item can be resumed or paused, offer to toggle -->
       <button
         type="button"
         v-if="item.canResume"
         @click.stop="resumeDownload"
-      ></button>
+      ><fa-icon icon="play" fixed-width /></button>
       <button
         type="button"
         v-else-if="item.state == 'in_progress'"
         @click.stop="pauseDownload"
-      ></button>
+      ><fa-icon icon="pause" fixed-width /></button>
       <!--  -->
 
-      <!-- If the download has been deleted or interrupted, offer to retry -->
+      <!-- If the item has been deleted or interrupted, offer to retry -->
       <button
         type="button"
         v-if="item.state == 'interrupted' || !item.exists"
         @click.stop="retryDownload"
-      ></button>
+      ><fa-icon icon="arrow-rotate-left" fixed-width /></button>
 
-      <!-- If the item is not currently downloading, offer to clear from list -->
+      <!-- If the item exists, offer to show its location on disk -->
       <button
         type="button"
-        v-if="item.state != 'in_progress'"
-        @click.stop="eraseFromList"
-      ></button>
+        v-if="item.exists"
+        @click.stop="showFile"
+      ><fa-icon icon="folder-blank" fixed-width /></button>
     </div>
 
     <div
@@ -48,7 +57,8 @@
 import { defineComponent, PropType, ref, computed, watch, toRefs, Ref } from 'vue';
 import { formatSize, isMac } from '@/common';
 
-import DownloadItem = chrome.downloads.DownloadItem;
+import downloads = chrome.downloads;
+import DownloadItem = downloads.DownloadItem;
 import bodyText = chrome.i18n.getMessage;
 
 
@@ -88,7 +98,7 @@ function useFileInfo(item: Ref<DownloadItem>) {
 
   watch(item, async () => {
     const src = await new Promise<string>(resolve => {
-      chrome.downloads.getFileIcon(item.value.id, { size: 32 }, resolve)
+      downloads.getFileIcon(item.value.id, { size: 32 }, resolve)
     });
 
     if (src) icon.value = src;
@@ -121,11 +131,11 @@ export default defineComponent({
     const { item } = toRefs(props);
     const folderOrFinder = bodyText(`location_${isMac ? 'macos' : 'folder'}`);
 
-    const openFile = () => chrome.downloads.open(item.value.id);
-    const showFile = () => chrome.downloads.show(item.value.id);
+    const openFile = () => downloads.open(item.value.id);
+    const showFile = () => downloads.show(item.value.id);
 
-    const pauseDownload = () => chrome.downloads.pause(item.value.id);
-    const resumeDownload = () => chrome.downloads.resume(item.value.id);
+    const pauseDownload = () => downloads.pause(item.value.id);
+    const resumeDownload = () => downloads.resume(item.value.id);
 
     const retryDownload = () => emit('retry', item.value.url);
     const eraseFromList = () => emit('erase', item.value.id);
@@ -167,3 +177,84 @@ export default defineComponent({
   },
 });
 </script>
+
+
+<style lang="scss" scoped>
+.download-item {
+  height: 75px;
+  padding: 0 14px;
+
+  border: 2px solid transparent;
+  &:hover { border-color: var(--accent1); }
+
+  display: grid;
+  grid-template-rows: 1fr;
+  grid-template-columns: 48px minmax(0, 1fr) min-content;
+  align-items: center;
+
+  column-gap: 24px;
+
+  background-color: var(--item-bg1);
+  &:nth-child(2n+2) { background-color: var(--item-bg2); }
+
+  cursor: pointer;
+}
+
+.icon {
+  display: block;
+  justify-self: center;
+}
+
+.info {
+  display: flex;
+  flex-flow: column nowrap;
+  row-gap: 4px;
+}
+
+.name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.size {
+  font-size: 12px;
+}
+
+.buttons {
+
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: flex-end;
+  column-gap: 14px;
+
+  button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+
+    border: 2px solid transparent;
+    &:hover { border-color: var(--accent2); }
+
+    margin: 0;
+    padding: 2px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: inherit;
+    background-color: var(--button-bg1);
+
+    cursor: pointer;
+  }
+}
+
+.error {
+
+  .icon, .name, .size {
+    opacity: 0.45;
+  }
+
+}
+</style>

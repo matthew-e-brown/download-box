@@ -57,3 +57,11 @@ export const isMac = (() => {
 
   return /mac/i.test(testString);
 })();
+
+
+export const enum Message {
+  Change          = '__DOWNLOAD_BOX_CHANGE__',
+  Erased          = '__DOWNLOAD_BOX_ERASED__',
+  NewDownload     = '__DOWNLOAD_BOX_NEW_DOWNLOAD__',
+  ProgressTick    = '__DOWNLOAD_BOX_PROGRESS_TICK__',
+}

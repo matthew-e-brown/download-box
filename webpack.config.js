@@ -43,7 +43,10 @@ module.exports = (_, { mode }) => {
         {
           test: /\.ts$/,
           loader: 'ts-loader',
-          options: { appendTsSuffixTo: [ /\.vue$/ ] }
+          options: {
+            transpileOnly: true,
+            appendTsSuffixTo: [ /\.vue$/ ],
+          }
         }
       ]
     },
@@ -72,12 +75,8 @@ module.exports = (_, { mode }) => {
   };
 
   /**
-   * @note
-   *
-   * This is *essential* because Webpack's production mode makes heavy use of
-   * `eval`, which is disallowed in Chrome Extensions. It's not very efficient
-   * to use `cheap-module-source-map`, but it's the only way to make it work in
-   * development.
+   * @note This is *essential* because Webpack's production mode makes heavy use
+   * of `eval`, which is disallowed in Chrome Extensions.
    */
   if (mode == 'development')
     config.devtool = 'inline-source-map';
