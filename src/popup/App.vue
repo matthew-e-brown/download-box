@@ -1,5 +1,26 @@
 <template>
-  <h1>{{ bodyText('title') }}</h1>
+  <h1>Downloads</h1>
+
+  <ul id="downloads-list" v-if="items.length > 0">
+    <Item
+      v-for="(item, i) in items"
+      :key="i"
+      :item="item"
+      @erase="eraseItem"
+      @retry="retryItem"
+    />
+  </ul>
+  <div id="empty" v-else>There's nothing here...</div>
+
+  <div id="page-buttons">
+    <button id="prev-page" type="button" @click="prevPage">
+
+    </button>
+    <span>{{ pageNumber }}</span>
+    <button id="next-page" type="button" @click="nextPage">
+
+    </button>
+  </div>
 </template>
 
 
@@ -78,6 +99,7 @@ export default defineComponent({
   setup() {
 
     const items = ref<DownloadItem[]>([ ]);
+    const pagination = usePagination(items);
 
     const refresh = async () => {
       items.value = await search({
@@ -94,9 +116,47 @@ export default defineComponent({
     onMounted(() => chrome.downloads.onChanged.addListener(onChanged));
     onUnmounted(() => chrome.downloads.onChanged.removeListener(onChanged));
 
+    const eraseItem = async (toRemove: number) => {
+      // Remove the item
+      await new Promise(resolve => {
+        chrome.downloads.erase({ id: toRemove }, resolve)
+      });
+
+      /**
+       * @note
+       *
+       * We have to handle the `refresh()` ourselves because of the possibility
+       * that they're on a deeper page. Just calling `refresh` without taking
+       * care to check if they deleted the first item in the page can cause some
+       * weirdness.
+       */
+
+      let startedBefore: string;
+      const index = items.value.findIndex(({ id }) => id == toRemove);
+
+      // If this is not the first page, and they deleted the first item, use the
+      // second item as the `startTime` item
+      if (pagination.pageNumber.value > 1 && index == 0) {
+        startedBefore = getItemStartTime(items.value[1]);
+      } else {
+        startedBefore = getItemStartTime();
+      }
+
+      items.value = await search({ ...defaultSearchOptions, startedBefore });
+    }
+
+    const retryItem = async (url: string) => {
+      chrome.downloads.download({ url }, refresh);
+    }
+
+    onMounted(refresh);
+
     return {
+      items,
+      eraseItem,
+      retryItem,
       bodyText,
-      ...usePagination(items),
+      ...pagination,
     };
   }
 });

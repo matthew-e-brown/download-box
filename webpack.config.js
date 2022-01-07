@@ -55,7 +55,7 @@ module.exports = (_, { mode }) => {
       new VueLoaderPlugin(),
       new CopyWebpackPlugin({
         patterns: [
-          { from: '_locales', to: '_locales' },
+          // { from: '_locales', to: '_locales' },
           { from: '../public', to: '.' }, // `../` because `context` is `src`
           {
             from: 'manifest.json',
@@ -80,7 +80,7 @@ module.exports = (_, { mode }) => {
    * development.
    */
   if (mode == 'development')
-    config.devtool = 'cheap-module-source-map';
+    config.devtool = 'inline-source-map';
 
   return config;
 }
