@@ -59,7 +59,7 @@ module.exports = (_, { mode }) => {
       new CopyWebpackPlugin({
         patterns: [
           // { from: '_locales', to: '_locales' },
-          { from: '../public', to: '.' }, // `../` because `context` is `src`
+          { from: 'static', to: '.' },
           {
             from: 'manifest.json',
             to: 'manifest.json',
