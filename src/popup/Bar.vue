@@ -17,7 +17,7 @@
 
       <linearGradient id="bar-gradient">
         <stop offset="0%"   :stop-color="gradientStart" />
-        <stop offset="100%" :stop-color="gradientEnd" />
+        <stop offset="60%" :stop-color="gradientEnd" />
       </linearGradient>
     </defs>
 

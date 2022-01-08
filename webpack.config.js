@@ -35,7 +35,7 @@ module.exports = (_, { mode }) => {
         {
           test: /\.(sa|sc|c)ss$/,
           use: [
-            'vue-style-loader',
+            'style-loader',
             'css-loader',
             'sass-loader',
           ]

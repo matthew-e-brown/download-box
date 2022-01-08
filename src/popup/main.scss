@@ -14,31 +14,66 @@ body {
 
   // Light theme:
 
-  // --bg: ;
-  // --fg: ;
-  // --item-bg1: ;
-  // --item-bg2: ;
-  // --button-bg1: ;
-  // --button-bg2: ;
-  // --accent1: ;
-  // --accent2: ;
-
   // Dark theme:
 
   @media (prefers-color-scheme: dark) {
-    --bg: #202020;
-    --fg: #F9F9F9;
-    --item-bg1: #181818;
-    --item-bg2: #282828;
-    --button-bg1: #3F3F3F;
-    --button-bg2: #303030;
-    --accent1: #14415A;
-    --accent2: #00A3FF;
-    --accent3-bg: #E02929;
-    --accent3-fg: var(--fg);
-    --accent3-border: #E85E5E;
+    $dark-blue: hsl(201, 64%, 22%);
+    $light-blue: hsl(201, 100%, 50%);
+
+    $dark-red: hsl(0, 75%, 22%);
+    $light-red: hsl(0, 75%, 50%);
+
+
+    --main-bg: hsl(0, 0%, 13%);
+    --main-fg: hsl(0, 0%, 98%);
+
+    --item-bg1: hsl(0, 0%, 9%);
+    --item-bg2: hsl(0, 0%, 16%);
+    --item-border: #{$dark-blue};
+    --item-border-error: hsla(0, 75%, 22%, 0.65);
+
+
+    --progress-bar-normal1: #{$dark-blue};
+    --progress-bar-normal2: #{$light-blue};
+
+    --progress-bar-paused1: hsl(60, 64%, 22%);
+    --progress-bar-paused2: hsl(60, 100%, 50%);
+
+    --progress-bar-error1: #{$dark-red};
+    --progress-bar-error2: #{$light-red};
+
+
+    --button-items-bg: hsl(0, 0%, 25%);
+    --button-pages-bg: hsl(0, 0%, 19%);
+    --button-items-border: #{$light-blue};
+    --button-pages-border: #{$dark-blue};
+
+    --button-confirm-bg: #{$light-red};
+    --button-confirm-fg: var(--main-fg);
+    --button-confirm-border: #{$dark-red};
   }
 
-  color: var(--fg);
-  background-color: var(--bg);
+  color: var(--main-fg);
+  background-color: var(--main-bg);
+}
+
+
+button.icon-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+
+  border: 2px solid transparent;
+  &:hover { border-color: var(--border-color); }
+
+  padding: 2px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: inherit;
+  background-color: var(--button-color);
+
+  cursor: pointer;
 }

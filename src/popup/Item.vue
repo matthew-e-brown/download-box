@@ -18,51 +18,56 @@
       <!-- If the item can be resumed or paused, offer to toggle -->
       <button
         type="button"
-        v-if="item.canResume"
+        class="icon-button"
+        v-if="showResume"
         @click.stop="resumeDownload"
       ><fa-icon icon="play" fixed-width /></button>
       <button
         type="button"
-        v-else-if="item.state == 'in_progress'"
+        class="icon-button"
+        v-else-if="showPause"
         @click.stop="pauseDownload"
       ><fa-icon icon="pause" fixed-width /></button>
 
       <!-- If the item has been deleted or interrupted, offer to retry -->
       <button
         type="button"
-        v-if="item.state == 'interrupted' || !item.exists"
+        class="icon-button"
+        v-if="showRetry"
         @click.stop="retryDownload"
       ><fa-icon icon="arrow-rotate-left" fixed-width /></button>
 
       <!-- If the item exists, offer to show its location on disk -->
       <button
         type="button"
-        v-if="item.exists"
+        class="icon-button"
+        v-if="showFolder"
         @click.stop="showFile"
       ><fa-icon icon="folder-blank" fixed-width /></button>
     </div>
 
     <ProgressBar
-      v-if="item.state == 'in_progress' || item.canResume"
+      v-if="showBar"
       :percent="percent"
-      gradient-start="#14415A"
-      gradient-end="#00A3FF"
+      :gradient-start="barColor.start"
+      :gradient-end="barColor.end"
     />
 
-    <Modal
-      text="Remove this item from the list?"
-      v-if="modalOpen"
-      @click.stop
-      @yes="eraseFromList"
-      @no="closeModal"
-    />
+    <transition name="slide-fade">
+      <Modal
+        v-if="modalOpen"
+        @click.stop
+        @yes="() => { eraseFromList(); closeModal(); }"
+        @no="closeModal"
+      />
+    </transition>
 
   </li>
 </template>
 
 
 <script lang="ts">
-import { defineComponent, PropType, ref, computed, watch, toRefs, Ref } from 'vue';
+import { defineComponent, PropType, ref, computed, watch, toRefs, Ref, ComputedRef } from 'vue';
 import { formatSize } from '@/common';
 
 import downloads = chrome.downloads;
@@ -72,7 +77,30 @@ import ProgressBar from './Bar.vue';
 import Modal from './Modal.vue';
 
 
+function useConditions(item: Ref<DownloadItem>) {
+
+  const showResume = computed(() => item.value.canResume);
+  const showPause = computed(() => item.value.state == 'in_progress');
+
+  const showRetry = computed(() => item.value.state == 'interrupted' || !item.value.exists);
+
+  const showFolder = computed(() => item.value.exists);
+
+  const showBar = computed(() => item.value.state == 'in_progress' || item.value.canResume);
+
+  return {
+    showResume,
+    showPause,
+    showRetry,
+    showFolder,
+    showBar,
+  }
+}
+
+
 function useFileInfo(item: Ref<DownloadItem>) {
+
+  const { showBar: inProgress } = useConditions(item);
 
   const filename = computed(() => {
     // Determine basename of file
@@ -85,7 +113,7 @@ function useFileInfo(item: Ref<DownloadItem>) {
     return filename.replace(/\.crdownload$/, '');
   });
 
-  const compute = () => {
+  const computePercentage = () => {
     // Use `fileSize` as a fallback if `totalBytes` is unknown
     const { bytesReceived, totalBytes, fileSize } = item.value;
     return {
@@ -95,8 +123,8 @@ function useFileInfo(item: Ref<DownloadItem>) {
   }
 
   const percent = computed(() => {
-    if (item.value.state == 'in_progress' || item.value.canResume) {
-      const { num, den } = compute();
+    if (inProgress.value) {
+      const { num, den } = computePercentage();
       if (den == 0) return 0;
       else return num / den;
     } else {
@@ -106,8 +134,8 @@ function useFileInfo(item: Ref<DownloadItem>) {
 
 
   const filesize = computed(() => {
-    if (item.value.state == 'in_progress' || item.value.canResume) {
-      const { num, den } = compute();
+    if (inProgress.value) {
+      const { num, den } = computePercentage();
       return `${formatSize(num)} / ${formatSize(den)}`;
     } else {
       return formatSize(item.value.fileSize);
@@ -173,23 +201,31 @@ export default defineComponent({
       emit('modal');
     }
 
+    const barColor = computed<{ start: string, end: string }>(() => {
+      let cssVarName;
 
-    const barColor = computed(() => {
-      if (item.value.state == 'in_progress') {
-        if (item.value.paused) return 'paused';
-        else return 'regular';
+      if (item.value.paused) {
+        cssVarName = 'paused';
       } else if (item.value.state == 'interrupted') {
-        return 'error';
+        cssVarName = 'error';
+      } else {
+        cssVarName = 'normal';
       }
+
+      return {
+        start: `var(--progress-bar-${cssVarName}1)`,
+        end: `var(--progress-bar-${cssVarName}2)`,
+      };
     });
 
     const itemClasses = computed(() => ({
       'error': item.value.state == 'interrupted' || !item.value.exists,
-      'modal-open': modalOpen.value
+      'modal-open': modalOpen.value,
     }));
 
 
     return {
+      ...useConditions(item),
       ...useFileInfo(item),
       openFile,
       showFile,
@@ -216,7 +252,10 @@ export default defineComponent({
   position: relative;
 
   border: 2px solid transparent;
-  &:not(.modal-open):hover { border-color: var(--accent1); }
+  &:not(.modal-open):hover {
+    border-color: var(--item-border);
+    &.error { border-color: var(--item-border-error); }
+  }
 
   display: grid;
   grid-template-rows: 1fr;
@@ -260,24 +299,9 @@ export default defineComponent({
   column-gap: 14px;
 
   button {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-
-    border: 2px solid transparent;
-    &:hover { border-color: var(--accent2); }
-
     margin: 0;
-    padding: 2px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    color: inherit;
-    background-color: var(--button-bg1);
-
-    cursor: pointer;
+    --button-color: var(--button-items-bg);
+    --border-color: var(--button-items-border);
   }
 }
 
@@ -292,5 +316,21 @@ export default defineComponent({
 ::v-deep(.progress-bar) {
   inset: -1px;
   top: unset;
+}
+
+.slide-fade-enter-active, .slide-fade-leave-active {
+  transition-duration: 125ms;
+  transition-timing-function: ease-out;
+  transition-property: transform, opacity;
+}
+
+.slide-fade-enter-from, .slide-fade-leave-to {
+  transform: translateX(10px);
+  opacity: 0;
+}
+
+.slide-fade-enter-to, .slide-fade-leave-from {
+  transform: translateX(0);
+  opacity: 1;
 }
 </style>

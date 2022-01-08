@@ -113,8 +113,8 @@ export default defineComponent({
     }
 
 
-    const refresh = async () => {
-      closeModals(-1);
+    const refresh = async (clearModals = true) => {
+      if (clearModals) closeModals(-1);
       items.value = await search({
         ...defaultSearchOptions,
         startedBefore: getItemStartTime(items.value[0])
@@ -173,7 +173,7 @@ export default defineComponent({
       if (message == Message.NewDownload) dirty.value = 'new';
       else if (message == Message.Erased) dirty.value = 'del';
 
-      refresh();
+      refresh(false);
     }
 
     onMounted(() => {
@@ -236,10 +236,10 @@ ul {
 
   button {
     color: inherit;
-    background-color: var(--button-bg2);
+    background-color: var(--button-pages-bg);
 
     border: 2px solid transparent;
-    &:hover { border-color: var(--accent1); }
+    &:hover { border-color: var(--button-pages-border); }
 
     margin: 0;
     padding: 0;

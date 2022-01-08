@@ -15,6 +15,7 @@ import {
   faArrowRotateLeft,
   faPlay,
   faPause,
+  faXmark,
 } from '@fortawesome/pro-solid-svg-icons';
 
 library.add(
@@ -24,6 +25,7 @@ library.add(
   faArrowRotateLeft,
   faPlay,
   faPause,
+  faXmark,
 );
 
 export default createApp(App)
