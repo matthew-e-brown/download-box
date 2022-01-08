@@ -1,31 +1,35 @@
 <template>
-  <h1>Downloads</h1>
+  <main @click="closeModals(-1)" @click.right="closeModals(-1)">
+    <h1>Downloads</h1>
 
-  <ul id="downloads-list" v-if="items.length > 0">
-    <Item
-      v-for="(item, i) in items"
-      :key="i"
-      :item="item"
-      @erase="eraseItem"
-      @retry="retryItem"
-    />
-  </ul>
-  <div id="empty" v-else>There's nothing here...</div>
+    <ul id="downloads-list" v-if="items.length > 0">
+      <Item
+        v-for="(item, i) in items"
+        :key="i"
+        :item="item"
+        :ref="(el: any) => itemRefs[i] = el"
+        @erase="eraseItem"
+        @retry="retryItem"
+        @modal="closeModals(i)"
+      />
+    </ul>
+    <div id="empty" v-else>There's nothing here...</div>
 
-  <div id="page-buttons">
-    <button id="prev-page" type="button" @click="prevPage">
-      <fa-icon icon="left" fixed-width />
-    </button>
-    <div>Page {{ pageNumber }}</div>
-    <button id="next-page" type="button" @click="nextPage">
-      <fa-icon icon="right" fixed-width />
-    </button>
-  </div>
+    <div id="page-buttons">
+      <button id="prev-page" type="button" @click="prevPage">
+        <fa-icon icon="left" fixed-width />
+      </button>
+      <div>Page {{ pageNumber }}</div>
+      <button id="next-page" type="button" @click="nextPage">
+        <fa-icon icon="right" fixed-width />
+      </button>
+    </div>
+  </main>
 </template>
 
 
 <script lang="ts">
-import { defineComponent, ref, computed, Ref, onMounted, onUnmounted } from 'vue';
+import { defineComponent, ref, computed, Ref, onMounted, onUnmounted, onBeforeUpdate } from 'vue';
 import { search, getItemStartTime, Message } from '@/common';
 
 import downloads = chrome.downloads;
@@ -100,7 +104,17 @@ export default defineComponent({
     const pagination = usePagination(items);
 
 
+    const itemRefs = ref<InstanceType<typeof Item>[]>([ ]);
+
+    const closeModals = (except: number) => {
+      itemRefs.value.forEach((item, i) => {
+        if (i != except) item.closeModal();
+      });
+    }
+
+
     const refresh = async () => {
+      closeModals(-1);
       items.value = await search({
         ...defaultSearchOptions,
         startedBefore: getItemStartTime(items.value[0])
@@ -171,11 +185,17 @@ export default defineComponent({
       onMessage.removeListener(messageHandler);
     });
 
+    onBeforeUpdate(() => {
+      itemRefs.value = [];
+    });
+
     return {
       dirty,
       items,
+      itemRefs,
       eraseItem,
       retryItem,
+      closeModals,
       ...pagination,
     };
   }

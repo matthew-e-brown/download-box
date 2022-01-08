@@ -3,8 +3,9 @@
     role="button"
     tabindex="0"
     @click="openFile"
+    @click.right.stop.prevent="openModal"
     class="download-item"
-    :class="{ error: item.state == 'interrupted' || !item.exists }"
+    :class="itemClasses"
   >
     <img :src="icon" class="icon" width="32" height="32" aria-hidden="true" alt="" />
 
@@ -43,9 +44,17 @@
 
     <ProgressBar
       v-if="item.state == 'in_progress' || item.canResume"
-      :percent="item.bytesReceived / item.totalBytes"
+      :percent="percent"
       gradient-start="#14415A"
       gradient-end="#00A3FF"
+    />
+
+    <Modal
+      text="Remove this item from the list?"
+      v-if="modalOpen"
+      @click.stop
+      @yes="eraseFromList"
+      @no="closeModal"
     />
 
   </li>
@@ -54,20 +63,13 @@
 
 <script lang="ts">
 import { defineComponent, PropType, ref, computed, watch, toRefs, Ref } from 'vue';
-import { formatSize, isMac } from '@/common';
+import { formatSize } from '@/common';
 
 import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;
-import bodyText = chrome.i18n.getMessage;
 
 import ProgressBar from './Bar.vue';
-
-
-enum ItemState {
-  Valid,
-  Error,
-  Progress,
-}
+import Modal from './Modal.vue';
 
 
 function useFileInfo(item: Ref<DownloadItem>) {
@@ -83,12 +85,30 @@ function useFileInfo(item: Ref<DownloadItem>) {
     return filename.replace(/\.crdownload$/, '');
   });
 
+  const compute = () => {
+    // Use `fileSize` as a fallback if `totalBytes` is unknown
+    const { bytesReceived, totalBytes, fileSize } = item.value;
+    return {
+      num: bytesReceived,
+      den: totalBytes > 0 ? totalBytes : fileSize
+    };
+  }
+
+  const percent = computed(() => {
+    if (item.value.state == 'in_progress' || item.value.canResume) {
+      const { num, den } = compute();
+      if (den == 0) return 0;
+      else return num / den;
+    } else {
+      return 1;
+    }
+  });
+
 
   const filesize = computed(() => {
-    if (item.value.state == 'in_progress') {
-      const a = formatSize(item.value.bytesReceived);
-      const b = formatSize(item.value.totalBytes);
-      return `${a} / ${b}`;
+    if (item.value.state == 'in_progress' || item.value.canResume) {
+      const { num, den } = compute();
+      return `${formatSize(num)} / ${formatSize(den)}`;
     } else {
       return formatSize(item.value.fileSize);
     }
@@ -97,6 +117,8 @@ function useFileInfo(item: Ref<DownloadItem>) {
   // Defaults to a blank, 1x1, transparent `.gif` file (placeholder)
   const icon = ref('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
 
+  // Use a `watch` instead of a regular computed because `getFileIcon` is
+  // asynchronous
   watch(item, async () => {
     const src = await new Promise<string>(resolve => {
       downloads.getFileIcon(item.value.id, { size: 32 }, resolve)
@@ -111,6 +133,7 @@ function useFileInfo(item: Ref<DownloadItem>) {
   return {
     filename,
     filesize,
+    percent,
     icon,
   };
 }
@@ -118,7 +141,7 @@ function useFileInfo(item: Ref<DownloadItem>) {
 
 export default defineComponent({
   name: 'Item',
-  components: { ProgressBar },
+  components: { ProgressBar, Modal },
   props: {
     item: {
       type: Object as PropType<DownloadItem>,
@@ -128,10 +151,10 @@ export default defineComponent({
   emits: {
     erase: (id: number) => typeof id == 'number',
     retry: (url: string) => typeof url == 'string',
+    modal: null,
   },
   setup(props, { emit }) {
     const { item } = toRefs(props);
-    const folderOrFinder = bodyText(`location_${isMac ? 'macos' : 'folder'}`);
 
     const openFile = () => downloads.open(item.value.id);
     const showFile = () => downloads.show(item.value.id);
@@ -142,15 +165,14 @@ export default defineComponent({
     const retryDownload = () => emit('retry', item.value.url);
     const eraseFromList = () => emit('erase', item.value.id);
 
-    const state = computed<ItemState>(() => {
-      if (!item.value.exists) return ItemState.Error;
 
-      switch (item.value.state) {
-        case 'complete': return ItemState.Valid;
-        case 'in_progress': return ItemState.Progress;
-        case 'interrupted': return ItemState.Error;
-      }
-    });
+    const modalOpen = ref(false);
+    const closeModal = () => modalOpen.value = false;
+    const openModal = () => {
+      modalOpen.value = true;
+      emit('modal');
+    }
+
 
     const barColor = computed(() => {
       if (item.value.state == 'in_progress') {
@@ -161,9 +183,13 @@ export default defineComponent({
       }
     });
 
+    const itemClasses = computed(() => ({
+      'error': item.value.state == 'interrupted' || !item.value.exists,
+      'modal-open': modalOpen.value
+    }));
+
 
     return {
-      folderOrFinder,
       ...useFileInfo(item),
       openFile,
       showFile,
@@ -171,9 +197,11 @@ export default defineComponent({
       resumeDownload,
       retryDownload,
       eraseFromList,
-      state,
+      modalOpen,
+      closeModal,
+      openModal,
       barColor,
-      ItemState,
+      itemClasses,
     };
 
   },
@@ -188,7 +216,7 @@ export default defineComponent({
   position: relative;
 
   border: 2px solid transparent;
-  &:hover { border-color: var(--accent1); }
+  &:not(.modal-open):hover { border-color: var(--accent1); }
 
   display: grid;
   grid-template-rows: 1fr;
