@@ -23,6 +23,16 @@ export function formatSize(bytes: number): string {
 }
 
 
+export function computePercentage(item: DownloadItem) {
+  // Use `fileSize` as a fallback if `totalBytes` is unknown
+  const { bytesReceived, totalBytes, fileSize } = item;
+  return {
+    num: bytesReceived,
+    den: totalBytes > 0 ? totalBytes : fileSize
+  };
+}
+
+
 /**
  * Gets the ISO 8601 date-string for a given item, plus one millisecond. Used
  * for starting a page at that given item. If nothing is passed, the current
@@ -64,4 +74,5 @@ export const enum Message {
   Erased          = '__DOWNLOAD_BOX_ERASED__',
   NewDownload     = '__DOWNLOAD_BOX_NEW_DOWNLOAD__',
   ProgressTick    = '__DOWNLOAD_BOX_PROGRESS_TICK__',
+  PopupOpened     = '__DOWNLOAD_BOX_POPUP_OPENED__',
 }

@@ -68,7 +68,7 @@
 
 <script lang="ts">
 import { defineComponent, PropType, ref, computed, watch, toRefs, Ref, ComputedRef } from 'vue';
-import { formatSize } from '@/common';
+import { formatSize, computePercentage } from '@/common';
 
 import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;
@@ -113,18 +113,9 @@ function useFileInfo(item: Ref<DownloadItem>) {
     return filename.replace(/\.crdownload$/, '');
   });
 
-  const computePercentage = () => {
-    // Use `fileSize` as a fallback if `totalBytes` is unknown
-    const { bytesReceived, totalBytes, fileSize } = item.value;
-    return {
-      num: bytesReceived,
-      den: totalBytes > 0 ? totalBytes : fileSize
-    };
-  }
-
   const percent = computed(() => {
     if (inProgress.value) {
-      const { num, den } = computePercentage();
+      const { num, den } = computePercentage(item.value);
       if (den == 0) return 0;
       else return num / den;
     } else {
@@ -135,7 +126,7 @@ function useFileInfo(item: Ref<DownloadItem>) {
 
   const filesize = computed(() => {
     if (inProgress.value) {
-      const { num, den } = computePercentage();
+      const { num, den } = computePercentage(item.value);
       return `${formatSize(num)} / ${formatSize(den)}`;
     } else {
       return formatSize(item.value.fileSize);
@@ -184,8 +175,10 @@ export default defineComponent({
   setup(props, { emit }) {
     const { item } = toRefs(props);
 
-    const openFile = () => downloads.open(item.value.id);
     const showFile = () => downloads.show(item.value.id);
+    const openFile = () => {
+      if (item.value.state == 'complete') downloads.open(item.value.id);
+    }
 
     const pauseDownload = () => downloads.pause(item.value.id);
     const resumeDownload = () => downloads.resume(item.value.id);
@@ -314,7 +307,7 @@ export default defineComponent({
 }
 
 ::v-deep(.progress-bar) {
-  inset: -1px;
+  inset: -2px;
   top: unset;
 }
 

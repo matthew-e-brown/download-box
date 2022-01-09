@@ -1,6 +1,8 @@
 import App from './App.vue';
 import { createApp } from 'vue';
 
+import { Message } from '@/common';
+
 import 'normalize.css';
 import '@fontsource/atkinson-hyperlegible/400.css';
 import './main.scss';
@@ -27,6 +29,8 @@ library.add(
   faPause,
   faXmark,
 );
+
+chrome.runtime.sendMessage(Message.PopupOpened);
 
 export default createApp(App)
   .component('fa-icon', FontAwesomeIcon)
