@@ -65,7 +65,12 @@ module.exports = (_, { mode }) => {
             to: 'manifest.json',
             transform: str => {
               const manifest = JSON.parse(str);
+
+              // Replace the `0.0.0` dummy version in manifest.json with the one
+              // from package.json
               manifest.version = require('./package.json').version;
+              delete manifest.$schema;  // causes an error if not removed
+
               return JSON.stringify(manifest, null, 2);
             }
           },
