@@ -33,7 +33,7 @@ export default defineComponent({
   justify-content: flex-end;
 
 
-  background: linear-gradient(to left, black, black 35%, transparent);
+  background: linear-gradient(to left, var(--modal-bg), var(--modal-bg) 35%, transparent);
 
   cursor: default;
 

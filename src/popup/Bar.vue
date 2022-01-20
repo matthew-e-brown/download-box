@@ -16,7 +16,7 @@
       </mask>
 
       <linearGradient :id="`bar-gradient-${key}`">
-        <stop offset="0%"   :stop-color="gradientStart" />
+        <stop offset="0%"  :stop-color="gradientStart" />
         <stop offset="60%" :stop-color="gradientEnd" />
       </linearGradient>
     </defs>

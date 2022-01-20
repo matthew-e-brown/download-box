@@ -309,6 +309,7 @@ export default defineComponent({
 ::v-deep(.progress-bar) {
   inset: -2px;
   top: unset;
+  width: calc(100% + 4px);
 }
 
 .slide-fade-enter-active, .slide-fade-leave-active {
