@@ -30,12 +30,12 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, Ref, onMounted, onUnmounted, onBeforeUpdate } from 'vue';
-import { search, getItemStartTime, Message } from '@/common';
+import { search, getItemStartTime } from '@/common';
 
 import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;
 import DownloadQuery = downloads.DownloadQuery;
-import onMessage = chrome.runtime.onMessage;
+import runtime = chrome.runtime;
 
 import Item from './Item.vue';
 
@@ -130,10 +130,13 @@ export default defineComponent({
 
       /**
        * @note
-       * We have to handle the `refresh()` ourselves because of the possibility
-       * that they're on a deeper page. Just calling `refresh` without taking
-       * care to check if they deleted the first item in the page can cause some
-       * weirdness.
+       * We handle the `refresh()` call differently in this case because of the
+       * possibility that we're on a deeper page. Just calling `refresh` without
+       * taking care to check if they deleted the first item in the page (which
+       * is used in the timeStack to determine what page we're on) can cause
+       * some weirdness.
+       *
+       * This is the same reason we don't have a downloads.onErased listener.
        */
 
       let startedBefore: string;
@@ -151,38 +154,21 @@ export default defineComponent({
     }
 
 
-    const retryItem = (url: string) => {
-      // 'refresh' will be handled by the onMessage handler
-      downloads.download({ url });
-    }
-
-
-    /**
-     * @note Because of the way Chrome's `downloads.search` API works, we are
-     * unable to get new downloads without re-loading the popup. It seems that
-     * the list of downloads is cached on open, and that `search` simply queries
-     * that list. This means that any edits made in the CTRL+J downloads list do
-     * not appear until that tab is closed and the popup is refreshed.
-     *
-     * So, we used this property to signal to the user that there are new
-     * downloads
-     */
-    const dirty = ref<false | 'new' | 'del'>(false);
-
-    const messageHandler = (message: Message) => {
-      if (message == Message.NewDownload) dirty.value = 'new';
-      else if (message == Message.Erased) dirty.value = 'del';
-
-      refresh(false);
-    }
+    // The 'refresh' is be handled by the handler
+    const retryItem = (url: string) => downloads.download({ url });
+    const handler = () => refresh(false);
 
     onMounted(() => {
       refresh();
-      onMessage.addListener(messageHandler);
+      runtime.onMessage.addListener(handler);
+      downloads.onCreated.addListener(handler);
+      downloads.onChanged.addListener(handler);
     });
 
     onUnmounted(() => {
-      onMessage.removeListener(messageHandler);
+      runtime.onMessage.removeListener(handler);
+      downloads.onCreated.removeListener(handler);
+      downloads.onChanged.removeListener(handler);
     });
 
     onBeforeUpdate(() => {
@@ -190,7 +176,6 @@ export default defineComponent({
     });
 
     return {
-      dirty,
       items,
       itemRefs,
       eraseItem,

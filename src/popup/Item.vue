@@ -67,7 +67,7 @@
 
 
 <script lang="ts">
-import { defineComponent, PropType, ref, computed, watch, toRefs, Ref, ComputedRef } from 'vue';
+import { defineComponent, PropType, ref, computed, watch, toRefs, Ref } from 'vue';
 import { formatSize, computePercentage } from '@/common';
 
 import downloads = chrome.downloads;
