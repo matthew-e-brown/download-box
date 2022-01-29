@@ -109,7 +109,7 @@ class DownloadManager {
     if (activeDownloads.length <= 0) return;
 
     // Otherwise, start the timer
-    this.timer = setInterval(this.tick, 500);
+    this.timer = setInterval(this.tick.bind(this), 500);
     this.tick();
   }
 
