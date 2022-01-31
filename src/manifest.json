@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/chrome-manifest",
 
   "name": "Download Box",
-  "description": "A download manager popup menu that replaces Chrome's unsightly shelf",
+  "description": "<copied from package.json>",
   "version": "0.0.0",
 
   "manifest_version": 3,

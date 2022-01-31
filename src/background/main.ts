@@ -156,8 +156,8 @@ class DownloadManager {
       const allDownloads = [ ...this.unchecked, ...activeDownloads ];
 
       const { num, den } = allDownloads.reduce((acc, cur) => {
-        // Handle edge-case where downloads are sometimes (somehow, not sure
-        // how) end without a `bytesReceived` property
+        // Handle edge-case where downloads sometimes (not sure how) end up
+        // without a `bytesReceived` property
         if (!cur || !cur.bytesReceived || (!cur.bytesReceived && !cur.fileSize)) {
           return acc;
         } else {

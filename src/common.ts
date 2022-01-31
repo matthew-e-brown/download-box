@@ -72,6 +72,6 @@ export const isMac = (() => {
 export enum Message {
   /** From the backend, to tell the frontend to refresh */
   Ping            = '__DOWNLOAD_BOX_PING__',
-  /** From the frontend, to tell teh backend that the popup has been opened */
+  /** From the frontend, to tell the backend that the popup has been opened */
   PopupOpened     = '__DOWNLOAD_BOX_POPUP_OPENED__',
 }
