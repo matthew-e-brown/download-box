@@ -1,7 +1,7 @@
 {
   "name": "download-box",
   "description": "A download manager popup menu that replaces Chrome's unsightly shelf",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "author": "Matthew Brown <matthew.e.brown.17@gmail.com>",
   "license": "GPL-3.0-or-later",
   "repository": {
