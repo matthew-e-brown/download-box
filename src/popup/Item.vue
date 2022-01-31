@@ -67,7 +67,7 @@
 
 
 <script lang="ts">
-import { defineComponent, PropType, ref, computed, watch, toRefs, Ref, ComputedRef } from 'vue';
+import { defineComponent, PropType, ref, computed, watch, toRefs, Ref } from 'vue';
 import { formatSize, computePercentage } from '@/common';
 
 import downloads = chrome.downloads;
@@ -309,6 +309,7 @@ export default defineComponent({
 ::v-deep(.progress-bar) {
   inset: -2px;
   top: unset;
+  width: calc(100% + 4px);
 }
 
 .slide-fade-enter-active, .slide-fade-leave-active {

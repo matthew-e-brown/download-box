@@ -12,45 +12,78 @@ body {
   font-weight: 400;
   font-size: 16px;
 
+  // Palette:
+
+  $blue-20: hsl(201, 64%, 22%);
+  $blue-30: hsl(201, 100%, 33%);
+  $blue-40: hsl(201, 100%, 42%);
+  $blue-50: hsl(201, 100%, 50%);
+
+  $red-20: hsl(0, 75%, 22%);
+  $red-50: hsl(0, 75%, 50%);
+
+  $yellow-20: hsl(60, 64%, 22%);
+  $yellow-40: hsl(60, 77%, 41%);
+  $yellow-50: hsl(60, 100%, 50%);
+
   // Light theme:
+
+  --main-bg: hsl(0, 0%, 98%);
+  --main-fg: hsl(0, 0%, 13%);
+
+  --item-bg1: hsl(0, 0%, 94%);
+  --item-bg2: hsl(0, 0%, 90%);
+  --item-border: #{$blue-40};
+  --item-border-error: hsla(0, 100%, 50%, 0.65);
+
+  --progress-bar-normal1: #{$blue-30};
+  --progress-bar-normal2: #{$blue-50};
+
+  --progress-bar-paused1: #{$yellow-40};
+  --progress-bar-paused2: #{$yellow-50};
+
+  --progress-bar-error1: #{$red-20};
+  --progress-bar-error2: #{$red-50};
+
+  --button-items-bg: hsl(0, 0%, 85%);
+  --button-pages-bg: hsl(0, 0%, 80%);
+  --button-items-border: #{$blue-50};
+  --button-pages-border: #{$blue-40};
+
+  --button-confirm-bg: #{$red-50};
+  --button-confirm-fg: white;
+  --button-confirm-border: #{$red-20};
+  --modal-bg: var(--main-bg);
 
   // Dark theme:
 
   @media (prefers-color-scheme: dark) {
-    $dark-blue: hsl(201, 64%, 22%);
-    $light-blue: hsl(201, 100%, 50%);
-
-    $dark-red: hsl(0, 75%, 22%);
-    $light-red: hsl(0, 75%, 50%);
-
-
     --main-bg: hsl(0, 0%, 13%);
     --main-fg: hsl(0, 0%, 98%);
 
     --item-bg1: hsl(0, 0%, 9%);
     --item-bg2: hsl(0, 0%, 16%);
-    --item-border: #{$dark-blue};
+    --item-border: #{$blue-20};
     --item-border-error: hsla(0, 75%, 22%, 0.65);
 
+    --progress-bar-normal1: #{$blue-20};
+    --progress-bar-normal2: #{$blue-50};
 
-    --progress-bar-normal1: #{$dark-blue};
-    --progress-bar-normal2: #{$light-blue};
+    --progress-bar-paused1: #{$yellow-20};
+    --progress-bar-paused2: #{$yellow-50};
 
-    --progress-bar-paused1: hsl(60, 64%, 22%);
-    --progress-bar-paused2: hsl(60, 100%, 50%);
-
-    --progress-bar-error1: #{$dark-red};
-    --progress-bar-error2: #{$light-red};
-
+    --progress-bar-error1: #{$red-20};
+    --progress-bar-error2: #{$red-50};
 
     --button-items-bg: hsl(0, 0%, 25%);
     --button-pages-bg: hsl(0, 0%, 19%);
-    --button-items-border: #{$light-blue};
-    --button-pages-border: #{$dark-blue};
+    --button-items-border: #{$blue-50};
+    --button-pages-border: #{$blue-20};
 
-    --button-confirm-bg: #{$light-red};
+    --button-confirm-bg: #{$red-50};
     --button-confirm-fg: var(--main-fg);
-    --button-confirm-border: #{$dark-red};
+    --button-confirm-border: #{$red-20};
+    --modal-bg: black;
   }
 
   color: var(--main-fg);

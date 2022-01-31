@@ -10,13 +10,13 @@
     class="progress-bar"
   >
     <defs>
-      <mask id="bar-mask">
+      <mask :id="`bar-mask-${key}`">
         <rect fill="black" x="0" y="0" width="100%" height="100%" />
         <path fill="white" :d="pathMask" />
       </mask>
 
-      <linearGradient id="bar-gradient">
-        <stop offset="0%"   :stop-color="gradientStart" />
+      <linearGradient :id="`bar-gradient-${key}`">
+        <stop offset="0%"  :stop-color="gradientStart" />
         <stop offset="60%" :stop-color="gradientEnd" />
       </linearGradient>
     </defs>
@@ -24,8 +24,8 @@
     <rect
       x="0" y="0"
       width="100%" height="100%"
-      mask="url(#bar-mask)"
-      fill="url(#bar-gradient)"
+      :mask="`url(#bar-mask-${key})`"
+      :fill="`url(#bar-gradient-${key})`"
     />
   </svg>
 </template>
@@ -55,6 +55,11 @@ export default defineComponent({
   setup(props) {
     const percent = toRef(props, 'percent');
 
+    // This bar needs a key to avoid having SVG masks conflict with one another
+    const key = 'xxxxx'.replaceAll('x', () => {
+      return (~~(Math.random() * 16)).toString(16);
+    });
+
     const pathMask = computed(() => {
       // https://yqnn.github.io/svg-path-editor/
       if (percent.value == 0) return 'M 0 0 Z';
@@ -68,6 +73,7 @@ export default defineComponent({
 
     return {
       pathMask,
+      key,
     };
   }
 });
