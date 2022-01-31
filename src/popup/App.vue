@@ -108,7 +108,7 @@ export default defineComponent({
 
     const closeModals = (except: number) => {
       itemRefs.value.forEach((item, i) => {
-        if (i != except) item.closeModal();
+        if (i != except) item?.closeModal();
       });
     }
 

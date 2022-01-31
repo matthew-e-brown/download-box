@@ -156,10 +156,16 @@ class DownloadManager {
       const allDownloads = [ ...this.unchecked, ...activeDownloads ];
 
       const { num, den } = allDownloads.reduce((acc, cur) => {
-        let { num, den } = computePercentage(cur);
-        num += acc.num;
-        den += acc.den;
-        return { num, den };
+        // Handle edge-case where downloads are sometimes (somehow, not sure
+        // how) end without a `bytesReceived` property
+        if (!cur || !cur.bytesReceived || (!cur.bytesReceived && !cur.fileSize)) {
+          return acc;
+        } else {
+          let { num, den } = computePercentage(cur);
+          num += acc.num;
+          den += acc.den;
+          return { num, den };
+        }
       }, { num: 0, den: 0 });
 
       // Start by determining the colour to draw
