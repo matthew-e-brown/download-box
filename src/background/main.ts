@@ -83,7 +83,7 @@ class DownloadManager {
   private onMessage(message: Message) {
     if (message == Message.PopupOpened) {
       // If they opened the popup, clear the unchecked downloads
-      while (this.unchecked.length) this.unchecked.pop();
+      this.unchecked = [];
       this.drawIcon();
     }
   }
@@ -108,6 +108,8 @@ class DownloadManager {
     const activeDownloads = await search({ state: 'in_progress' });
     if (activeDownloads.length <= 0) return;
 
+    console.log('Timer started');
+
     // Otherwise, start the timer
     this.timer = setInterval(this.tick.bind(this), 500);
     this.tick();
@@ -119,6 +121,8 @@ class DownloadManager {
    */
   private stop() {
     if (this.timer === null) return;
+
+    console.log('Timer stopped');
 
     clearInterval(this.timer);
     this.timer = null;
@@ -155,6 +159,7 @@ class DownloadManager {
       // Get total completion percentage across all downloads
       const allDownloads = [ ...this.unchecked, ...activeDownloads ];
 
+      // Compute the percentage of all unchecked and active downloads combined
       const { num, den } = allDownloads.reduce((acc, cur) => {
         // Handle edge-case where downloads sometimes (not sure how) end up
         // without a `bytesReceived` property
@@ -162,32 +167,36 @@ class DownloadManager {
           return acc;
         } else {
           let { num, den } = computePercentage(cur);
-          num += acc.num;
-          den += acc.den;
-          return { num, den };
+          acc.num += num;
+          acc.den += den;
+          return acc;
         }
       }, { num: 0, den: 0 });
 
-      // Start by determining the colour to draw
+      // Determine the colour to draw
       const color = (() => {
-        // First priority: check if any of the freshly completed items errored:
-        if (this.unchecked.some(d => d.state == 'interrupted')) return Color.Error;
+        // First priority: check if any of the freshly completed items
+        // errored-out (excluding those cancelled by the user).
+        if (this.unchecked.some(d => d.state == 'interrupted' && !d.error?.startsWith('USER_')))
+          return Color.Error;
 
-        // Second: check if any of the currently active items are paused:
-        if (activeDownloads.some(item => item.paused)) return Color.Paused;
+        // Second: check if any of the currently active items are paused.
+        if (activeDownloads.some(item => item.paused))
+          return Color.Paused;
 
-        // Third: check if any of the freshly completed items were successful:
-        if (this.unchecked.some(c => c.state == 'complete')) return Color.Complete;
+        // Third: check if any of the freshly completed items were successful.
+        if (this.unchecked.some(c => c.state == 'complete'))
+          return Color.Complete;
 
-        // Otherwise, just use the normal color
+        // Otherwise, just use the normal color.
         return Color.Normal;
       })();
 
-      await this.icon.draw(num / den, color);
+      this.icon.draw(num / den, color);
     } else {
 
       // Just draw the regular icon
-      await this.icon.draw();
+      this.icon.draw();
     }
   }
 
