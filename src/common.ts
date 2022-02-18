@@ -74,4 +74,6 @@ export enum Message {
   Ping            = '__DOWNLOAD_BOX_PING__',
   /** From the frontend, to tell the backend that the popup has been opened */
   PopupOpened     = '__DOWNLOAD_BOX_POPUP_OPENED__',
+  /** From the backend; asks the frontend to reply if it is currently open */
+  StatusCheck     = '__DOWNLOAD_BOX_CHECK_POPUP__',
 }

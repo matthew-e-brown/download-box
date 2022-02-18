@@ -30,7 +30,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, Ref, onMounted, onUnmounted, onBeforeUpdate } from 'vue';
-import { search, getItemStartTime } from '@/common';
+import { search, getItemStartTime, Message } from '@/common';
 
 import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;
@@ -153,20 +153,32 @@ export default defineComponent({
       items.value = await search({ ...defaultSearchOptions, startedBefore });
     }
 
-
-    // The 'refresh' is be handled by the handler
     const retryItem = (url: string) => downloads.download({ url });
+
+    // Refreshes the list. This handler is used for nearly all messages
     const handler = () => refresh(false);
+    // Replies to the backend when it asks for the popup status
+    const statusHandler = (message: Message) => {
+      if (message == Message.StatusCheck) {
+        runtime.sendMessage(Message.PopupOpened);
+      }
+    }
 
     onMounted(() => {
       refresh();
       runtime.onMessage.addListener(handler);
+      runtime.onMessage.addListener(statusHandler);
       downloads.onCreated.addListener(handler);
       downloads.onChanged.addListener(handler);
+
+      // Tell the background script that the popup was opened, so it can re-draw
+      // the icon in the regular color
+      runtime.sendMessage(Message.PopupOpened);
     });
 
     onUnmounted(() => {
       runtime.onMessage.removeListener(handler);
+      runtime.onMessage.removeListener(statusHandler);
       downloads.onCreated.removeListener(handler);
       downloads.onChanged.removeListener(handler);
     });

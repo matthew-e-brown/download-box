@@ -69,6 +69,9 @@ class DownloadManager {
       if (state == 'interrupted' || state == 'complete') {
         const [ item ] = await search({ id: delta.id });
         this.unchecked.push(item);
+
+        // Ask the popup to reply with a `PopupOpened` if it is open
+        runtime.sendMessage(Message.StatusCheck);
       }
     }
 

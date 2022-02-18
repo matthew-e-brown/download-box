@@ -32,9 +32,6 @@ library.add(
   faLink,
 );
 
-// Tell the background script that the popup was opened, so it can re-draw the
-// icon in the regular color
-chrome.runtime.sendMessage(Message.PopupOpened);
 
 export default createApp(App)
   .component('fa-icon', FontAwesomeIcon)
