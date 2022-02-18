@@ -3,7 +3,7 @@
     role="button"
     tabindex="0"
     @click="openFile"
-    @click.right.stop.prevent="openModal"
+    @click.right.stop.prevent="openOverlay"
     class="download-item"
     :class="itemClasses"
   >
@@ -14,7 +14,7 @@
       <div class="size">{{ filesize }}</div>
     </div>
 
-    <div class="buttons">
+    <div class="button-row">
       <!-- If the item can be resumed or paused, offer to toggle -->
       <button
         type="button"
@@ -54,12 +54,21 @@
     />
 
     <transition name="slide-fade">
-      <Modal
-        v-if="modalOpen"
-        @click.stop
-        @yes="() => { eraseFromList(); closeModal(); }"
-        @no="closeModal"
-      />
+      <ItemOverlay
+        v-if="isOverlayOpen"
+        @click.stop="closeOverlay"
+      >
+        <button
+          type="button"
+          class="icon-button link-button"
+          @click="copyLink"
+        ><fa-icon icon="link" fixed-width /></button>
+        <button
+          type="button"
+          class="icon-button erase-button"
+          @click="eraseFromList"
+        ><fa-icon icon="xmark" fixed-width /></button>
+      </ItemOverlay>
     </transition>
 
   </li>
@@ -74,7 +83,7 @@ import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;
 
 import ProgressBar from './Bar.vue';
-import Modal from './Modal.vue';
+import ItemOverlay from './ItemOverlay.vue';
 
 
 function useConditions(item: Ref<DownloadItem>) {
@@ -116,8 +125,7 @@ function useFileInfo(item: Ref<DownloadItem>) {
   const percent = computed(() => {
     if (inProgress.value) {
       const { num, den } = computePercentage(item.value);
-      if (den == 0) return 0;
-      else return num / den;
+      return (den == 0) ? 0 : num / den;
     } else {
       return 1;
     }
@@ -160,7 +168,7 @@ function useFileInfo(item: Ref<DownloadItem>) {
 
 export default defineComponent({
   name: 'Item',
-  components: { ProgressBar, Modal },
+  components: { ProgressBar, ItemOverlay },
   props: {
     item: {
       type: Object as PropType<DownloadItem>,
@@ -170,7 +178,7 @@ export default defineComponent({
   emits: {
     erase: (id: number) => typeof id == 'number',
     retry: (url: string) => typeof url == 'string',
-    modal: null,
+    overlay: null,
   },
   setup(props, { emit }) {
     const { item } = toRefs(props);
@@ -185,13 +193,13 @@ export default defineComponent({
 
     const retryDownload = () => emit('retry', item.value.url);
     const eraseFromList = () => emit('erase', item.value.id);
+    const copyLink = () => navigator.clipboard.writeText(item.value.finalUrl);
 
-
-    const modalOpen = ref(false);
-    const closeModal = () => modalOpen.value = false;
-    const openModal = () => {
-      modalOpen.value = true;
-      emit('modal');
+    const isOverlayOpen = ref(false);
+    const closeOverlay = () => isOverlayOpen.value = false;
+    const openOverlay = () => {
+      isOverlayOpen.value = true;
+      emit('overlay');
     }
 
     const barColor = computed<{ start: string, end: string }>(() => {
@@ -213,7 +221,7 @@ export default defineComponent({
 
     const itemClasses = computed(() => ({
       'error': item.value.state == 'interrupted' || !item.value.exists,
-      'modal-open': modalOpen.value,
+      'overlay-open': isOverlayOpen.value,
     }));
 
 
@@ -226,9 +234,10 @@ export default defineComponent({
       resumeDownload,
       retryDownload,
       eraseFromList,
-      modalOpen,
-      closeModal,
-      openModal,
+      copyLink,
+      isOverlayOpen,
+      closeOverlay,
+      openOverlay,
       barColor,
       itemClasses,
     };
@@ -245,7 +254,7 @@ export default defineComponent({
   position: relative;
 
   border: 2px solid transparent;
-  &:not(.modal-open):hover {
+  &:not(.overlay-open):hover {
     border-color: var(--item-border);
     &.error { border-color: var(--item-border-error); }
   }
@@ -284,18 +293,10 @@ export default defineComponent({
   font-size: 12px;
 }
 
-.buttons {
-
-  display: flex;
-  flex-flow: row nowrap;
-  justify-content: flex-end;
-  column-gap: 14px;
-
-  button {
-    margin: 0;
-    --button-color: var(--button-items-bg);
-    --border-color: var(--button-items-border);
-  }
+.erase-button {
+  color: var(--button-confirm-fg);
+  --button-color: var(--button-confirm-bg);
+  --border-color: var(--button-confirm-border);
 }
 
 .error {

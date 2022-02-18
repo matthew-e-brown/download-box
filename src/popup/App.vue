@@ -1,5 +1,5 @@
 <template>
-  <main @click="closeModals(-1)" @click.right="closeModals(-1)">
+  <main @click="closeAllOverlays(-1)" @click.right="closeAllOverlays(-1)">
     <h1>Downloads</h1>
 
     <ul id="downloads-list" v-if="items.length > 0">
@@ -10,7 +10,7 @@
         :ref="(el: any) => itemRefs[i] = el"
         @erase="eraseItem"
         @retry="retryItem"
-        @modal="closeModals(i)"
+        @overlay="closeAllOverlays(i)"
       />
     </ul>
     <div id="empty" v-else>There's nothing here...</div>
@@ -106,15 +106,15 @@ export default defineComponent({
 
     const itemRefs = ref<InstanceType<typeof Item>[]>([ ]);
 
-    const closeModals = (except: number) => {
+    const closeAllOverlays = (except: number) => {
       itemRefs.value.forEach((item, i) => {
-        if (i != except) item?.closeModal();
+        if (i != except) item?.closeOverlay();
       });
     }
 
 
     const refresh = async (clearModals = true) => {
-      if (clearModals) closeModals(-1);
+      if (clearModals) closeAllOverlays(-1);
       items.value = await search({
         ...defaultSearchOptions,
         startedBefore: getItemStartTime(items.value[0])
@@ -125,7 +125,7 @@ export default defineComponent({
     const eraseItem = async (toRemove: number) => {
       // Remove the item
       await new Promise(resolve => {
-        downloads.erase({ id: toRemove }, resolve)
+        downloads.erase({ id: toRemove }, resolve);
       });
 
       /**
@@ -180,7 +180,7 @@ export default defineComponent({
       itemRefs,
       eraseItem,
       retryItem,
-      closeModals,
+      closeAllOverlays,
       ...pagination,
     };
   }

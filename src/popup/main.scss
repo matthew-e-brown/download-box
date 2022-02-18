@@ -110,3 +110,18 @@ button.icon-button {
 
   cursor: pointer;
 }
+
+
+.button-row {
+
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: flex-end;
+  column-gap: 14px;
+
+  button {
+    margin: 0;
+    --button-color: var(--button-items-bg);
+    --border-color: var(--button-items-border);
+  }
+}

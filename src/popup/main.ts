@@ -18,6 +18,7 @@ import {
   faPlay,
   faPause,
   faXmark,
+  faLink,
 } from '@fortawesome/pro-solid-svg-icons';
 
 library.add(
@@ -28,6 +29,7 @@ library.add(
   faPlay,
   faPause,
   faXmark,
+  faLink,
 );
 
 // Tell the background script that the popup was opened, so it can re-draw the
