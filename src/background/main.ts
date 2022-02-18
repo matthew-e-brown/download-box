@@ -154,7 +154,27 @@ class DownloadManager {
   private async drawIcon() {
     const activeDownloads = await search({ state: 'in_progress' });
 
-    // Check if anything is actually downloading at the moment
+    // Determine the colour to draw
+    const color = (() => {
+      // First priority: check if any of the freshly completed items
+      // errored-out (excluding those cancelled by the user).
+      if (this.unchecked.some(d => d.state == 'interrupted' && !d.error?.startsWith('USER_')))
+        return Color.Error;
+
+      // Second: check if any of the currently active items are paused.
+      if (activeDownloads.some(item => item.paused))
+        return Color.Paused;
+
+      // Third: check if any of the freshly completed items were successful.
+      if (this.unchecked.some(c => c.state == 'complete'))
+        return Color.Complete;
+
+      // Otherwise, just use the normal color.
+      return Color.Normal;
+    })();
+
+    // If anything is actually downloading at the moment, check the total
+    // percentage
     if (activeDownloads.length > 0) {
       // Get total completion percentage across all downloads
       const allDownloads = [ ...this.unchecked, ...activeDownloads ];
@@ -173,30 +193,11 @@ class DownloadManager {
         }
       }, { num: 0, den: 0 });
 
-      // Determine the colour to draw
-      const color = (() => {
-        // First priority: check if any of the freshly completed items
-        // errored-out (excluding those cancelled by the user).
-        if (this.unchecked.some(d => d.state == 'interrupted' && !d.error?.startsWith('USER_')))
-          return Color.Error;
-
-        // Second: check if any of the currently active items are paused.
-        if (activeDownloads.some(item => item.paused))
-          return Color.Paused;
-
-        // Third: check if any of the freshly completed items were successful.
-        if (this.unchecked.some(c => c.state == 'complete'))
-          return Color.Complete;
-
-        // Otherwise, just use the normal color.
-        return Color.Normal;
-      })();
-
-      this.icon.draw(num / den, color);
+      this.icon.draw(color, num / den);
     } else {
 
-      // Just draw the regular icon
-      this.icon.draw();
+      // Just draw icon without a progress bar
+      this.icon.draw(color);
     }
   }
 

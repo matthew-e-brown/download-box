@@ -123,7 +123,11 @@ export class Icon {
   }
 
 
-  public async draw(percentage?: number, color: Color = Color.Normal) {
+  public async draw(): Promise<void>;
+  public async draw(color: Color): Promise<void>;
+  public async draw(color: Color, percentage: number): Promise<void>;
+
+  public async draw(color: Color = Color.Normal, percentage?: number) {
     this.context.clearRect(0, 0, 160, 160);
 
     if (percentage) {
