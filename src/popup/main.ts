@@ -1,8 +1,6 @@
 import App from './App.vue';
 import { createApp } from 'vue';
 
-import { Message } from '@/common';
-
 import 'normalize.css';
 import '@fontsource/atkinson-hyperlegible/400.css';
 import './main.scss';

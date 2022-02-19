@@ -37,7 +37,7 @@ import DownloadItem = downloads.DownloadItem;
 import DownloadQuery = downloads.DownloadQuery;
 import runtime = chrome.runtime;
 
-import Item from './Item.vue';
+import Item from './components/Item.vue';
 
 
 const defaultSearchOptions: DownloadQuery = {
