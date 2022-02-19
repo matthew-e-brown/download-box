@@ -6,6 +6,8 @@ import DownloadItem = downloads.DownloadItem;
 import DownloadDelta = downloads.DownloadDelta;
 import runtime = chrome.runtime;
 
+// Size of a tick in milliseconds
+export const TICK_MS = 500;
 
 class DownloadManager {
 
@@ -114,7 +116,7 @@ class DownloadManager {
     console.log('Timer started');
 
     // Otherwise, start the timer
-    this.timer = setInterval(this.tick.bind(this), 500);
+    this.timer = setInterval(this.tick.bind(this), TICK_MS);
     this.tick();
   }
 
@@ -136,8 +138,8 @@ class DownloadManager {
 
 
   /**
-   * Pings the popup to refresh and redraws the icon every 500 milliseconds.
-   * Stops itself when no more downloads are active.
+   * Pings the popup to refresh and redraws the icon every `TICK_MS`
+   * milliseconds. Stops itself when no more downloads are active.
    */
   private async tick() {
     const activeDownloads = await search({ state: 'in_progress' });
