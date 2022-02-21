@@ -1,6 +1,6 @@
 import { search, computePercentage, Message, MessageType, TICK_MS } from '@/common';
 import { SpeedTracker, serializeMap } from './speed';
-import { Icon, Color } from './draw';
+import { Icon, Color } from './icon';
 
 import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;

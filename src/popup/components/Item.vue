@@ -321,9 +321,9 @@ export default defineComponent({
 }
 
 .erase-button {
-  color: var(--button-confirm-fg);
-  --button-color: var(--button-confirm-bg);
-  --border-color: var(--button-confirm-border);
+  color: var(--button-warning-fg);
+  --button-color: var(--button-warning-bg);
+  --border-color: var(--button-warning-border);
 }
 
 .error {
