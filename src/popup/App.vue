@@ -111,15 +111,14 @@ export default defineComponent({
     provide(speedKey, itemSpeeds);
 
 
-    const closeAllOverlays = (except: number) => {
+    const closeAllOverlays = (exceptIndex: number) => {
       itemRefs.value.forEach((item, i) => {
-        if (i != except) item?.closeOverlay();
+        if (i != exceptIndex) item?.closeOverlay();
       });
     }
 
 
-    const refresh = async (clearModals = true) => {
-      if (clearModals) closeAllOverlays(-1);
+    const refresh = async () => {
       items.value = await search({
         ...defaultSearchOptions,
         startedBefore: getItemStartTime(items.value[0])
@@ -138,30 +137,23 @@ export default defineComponent({
       /**
        * @note
        * We handle the `refresh()` call differently in this case because of the
-       * possibility that we're on a deeper page. Just calling `refresh` without
-       * taking care to check if they deleted the first item in the page (which
-       * is used in the timeStack to determine what page we're on) can cause
-       * some weirdness.
+       * possibility that they cleared the first item on the page. Just calling
+       * `refresh` without taking care to check which one they deleted might
+       * cause some weirdness, since the time of the first item on the page is
+       * use in the `pageStack`.
        *
        * This is the same reason we don't have a downloads.onErased listener.
        */
 
-      let startedBefore: string;
-      const index = items.value.findIndex(({ id }) => id == toRemove);
-
-      // If this is not the first page, and they deleted the first item, use the
-      // second item as the `startTime` item
-      if (pagination.pageNumber.value > 1 && index == 0) {
-        startedBefore = getItemStartTime(items.value[1]);
-      } else {
-        startedBefore = getItemStartTime();
-      }
+      const deleted = items.value.findIndex(({ id }) => id == toRemove);
+      const startedBefore = getItemStartTime(items.value[deleted == 0 ? 1 : 0]);
 
       items.value = await search({ ...defaultSearchOptions, startedBefore });
+      closeAllOverlays(-1);
     }
 
 
-    const downloadHandler = () => refresh(false);
+    const downloadHandler = () => refresh();
 
     const messageHandler = (message: Message) => {
       switch (message.type) {
@@ -172,7 +164,7 @@ export default defineComponent({
 
         case MessageType.Ping:
           if (message.payload) itemSpeeds.value = message.payload;
-          refresh(false);
+          refresh();
           break;
 
       }
@@ -197,6 +189,7 @@ export default defineComponent({
     });
 
     onBeforeUpdate(() => {
+      // Clear the itemRefs because they are re-added each render
       itemRefs.value = [];
     });
 
