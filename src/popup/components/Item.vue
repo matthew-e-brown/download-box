@@ -11,8 +11,13 @@
 
     <div class="info">
       <div class="name">{{ filename }}</div>
-      <div class="size">{{ filesize }}</div>
-      <div class="speed" v-if="showBar">{{ downSpeed }}/s</div>
+      <div class="size">
+        <div class="file-size">{{ filesize }}</div>
+        <template v-if="showBar || showResume">
+          <div class="dot">&CenterDot;</div>
+          <div class="down-speed">{{ showResume ? 'Stopped' : downSpeed }}</div>
+        </template>
+      </div>
     </div>
 
     <div class="button-row">
@@ -150,9 +155,9 @@ function useFileInfo(item: Ref<DownloadItem>) {
   const downSpeed = computed(() => {
     if (inProgress.value && speeds) {
       const speed = speeds.value[item.value.id];
-      return formatSize(speed ?? -1);
+      return `${formatSize(speed ?? -1)}/s`;
     } else {
-      return formatSize(0);
+      return `${formatSize(0)}/s`;
     }
   });
 
@@ -305,7 +310,14 @@ export default defineComponent({
 }
 
 .size {
+  display: flex;
+  flex-flow: row nowrap;
+  column-gap: 6px;
   font-size: 12px;
+}
+
+.dot {
+  opacity: 0.75;
 }
 
 .erase-button {
