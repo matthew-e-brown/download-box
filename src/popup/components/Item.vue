@@ -12,6 +12,7 @@
     <div class="info">
       <div class="name">{{ filename }}</div>
       <div class="size">{{ filesize }}</div>
+      <div class="speed" v-if="showBar">{{ downSpeed }}/s</div>
     </div>
 
     <div class="button-row">
@@ -76,8 +77,9 @@
 
 
 <script lang="ts">
-import { defineComponent, PropType, ref, computed, watch, toRefs, Ref } from 'vue';
+import { defineComponent, ref, computed, watch, toRefs, inject, Ref, PropType } from 'vue';
 import { formatSize, computePercentage } from '@/common';
+import { speedKey } from '../main';
 
 import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;
@@ -110,6 +112,8 @@ function useConditions(item: Ref<DownloadItem>) {
 function useFileInfo(item: Ref<DownloadItem>) {
 
   const { showBar: inProgress } = useConditions(item);
+  const speeds = inject(speedKey);
+
 
   const filename = computed(() => {
     // Determine basename of file
@@ -121,6 +125,7 @@ function useFileInfo(item: Ref<DownloadItem>) {
 
     return filename.replace(/\.crdownload$/, '');
   });
+
 
   const percent = computed(() => {
     if (inProgress.value) {
@@ -141,25 +146,35 @@ function useFileInfo(item: Ref<DownloadItem>) {
     }
   });
 
+
+  const downSpeed = computed(() => {
+    if (inProgress.value && speeds) {
+      const speed = speeds.value[item.value.id];
+      return formatSize(speed ?? -1);
+    } else {
+      return formatSize(0);
+    }
+  });
+
+
   // Defaults to a blank, 1x1, transparent `.gif` file (placeholder)
   const icon = ref('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
 
   // Use a `watch` instead of a regular computed because `getFileIcon` is
   // asynchronous
-  watch(item, async () => {
+  watch(() => item.value.id, async () => {
     const src = await new Promise<string>(resolve => {
       downloads.getFileIcon(item.value.id, { size: 32 }, resolve)
     });
 
     if (src) icon.value = src;
-  }, {
-    immediate: true
-  });
+  }, { immediate: true });
 
 
   return {
     filename,
     filesize,
+    downSpeed,
     percent,
     icon,
   };

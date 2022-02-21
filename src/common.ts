@@ -2,6 +2,11 @@ import DownloadItem = chrome.downloads.DownloadItem;
 import DownloadQuery = chrome.downloads.DownloadQuery;
 
 
+// Size of a tick in milliseconds
+export const TICK_MS = 500;
+export const TICKS_PER_SECOND = 1000 / TICK_MS;
+
+
 export function search(query: DownloadQuery) {
   return new Promise<DownloadItem[]>(resolve => {
     chrome.downloads.search(query, resolve);
@@ -17,7 +22,7 @@ export function formatSize(bytes: number): string {
   const k = 1000;
   const s = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
   const i = Math.floor(Math.log10(bytes) / Math.log10(k));
-  const p = i && 2; // 0 decimals if index is 0; no decimals for 'Bytes'
+  const p = i && 2; // 0 decimals if index is 0: no decimals for 'Bytes'
 
   return `${(bytes / Math.pow(k, i)).toFixed(p)} ${s[i]}`;
 }

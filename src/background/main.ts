@@ -1,4 +1,5 @@
-import { search, computePercentage, Message, MessageType } from '@/common';
+import { search, computePercentage, Message, MessageType, TICK_MS } from '@/common';
+import { SpeedTracker, serializeMap } from './speed';
 import { Icon, Color } from './draw';
 
 import downloads = chrome.downloads;
@@ -6,13 +7,12 @@ import DownloadItem = downloads.DownloadItem;
 import DownloadDelta = downloads.DownloadDelta;
 import runtime = chrome.runtime;
 
-// Size of a tick in milliseconds
-export const TICK_MS = 500;
 
 class DownloadManager {
 
   private static _instance: DownloadManager | null = null;
 
+  private speeds: Map<DownloadItem['id'], SpeedTracker>;
   private timer: ReturnType<typeof setInterval> | null;
   private icon: Icon;
 
@@ -24,6 +24,7 @@ class DownloadManager {
 
 
   private constructor() {
+    this.speeds = new Map();
     this.timer = null;
     this.icon = new Icon();
 
@@ -71,6 +72,7 @@ class DownloadManager {
       if (state == 'interrupted' || state == 'complete') {
         const [ item ] = await search({ id: delta.id });
         this.unchecked.push(item);
+        this.speeds.delete(item.id);
 
         // Ask the popup to reply with a `PopupOpened` if it is open
         runtime.sendMessage({ type: MessageType.StatusCheck });
@@ -90,6 +92,10 @@ class DownloadManager {
       // If they opened the popup, clear the unchecked downloads
       this.unchecked = [];
       this.drawIcon();
+
+      // Also send the popup a copy of the speeds, just in case they need it
+      const payload = serializeMap(this.speeds);
+      runtime.sendMessage({ type: MessageType.Ping, payload });
     }
   }
 
@@ -132,6 +138,9 @@ class DownloadManager {
     clearInterval(this.timer);
     this.timer = null;
 
+    // Just in case a download managed to sneak through without getting deleted
+    this.speeds.clear();
+
     // Drawing the icon after downloads complete is handled by the onChanged
     // listener.
   }
@@ -145,7 +154,19 @@ class DownloadManager {
     const activeDownloads = await search({ state: 'in_progress' });
 
     if (activeDownloads.length > 0) {
-      runtime.sendMessage({ type: MessageType.Ping });
+
+      // Update our speeds
+      for (const download of activeDownloads) {
+        const bytes = download.bytesReceived;
+        const tracker = this.speeds.get(download.id);
+
+        if (tracker) tracker.pushSize(bytes);
+        else this.speeds.set(download.id, new SpeedTracker(bytes));
+      }
+
+      // Send to the popup
+      const payload = serializeMap(this.speeds);
+      runtime.sendMessage({ type: MessageType.Ping, payload });
       this.drawIcon();
     } else {
       this.stop();

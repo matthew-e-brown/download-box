@@ -1,6 +1,7 @@
-import { TICK_MS } from './main';
+import { DownloadSpeeds, TICKS_PER_SECOND } from '@/common';
 
-const TICKS_PER_SECOND = 1000 / TICK_MS;
+import DownloadItem = chrome.downloads.DownloadItem;
+
 
 interface RecentAmount {
   time: Date,
@@ -50,4 +51,12 @@ export class SpeedTracker {
     // Take the average speed (of the ones in the `speeds` array)
     else return this.speeds.reduce((a, c) => a + c) / this.speeds.length;
   }
+}
+
+
+export function serializeMap(map: Map<DownloadItem['id'], SpeedTracker>) {
+  return [...map.entries()].reduce<DownloadSpeeds>((acc, [ key, value ]) => {
+    acc[key] = value.speed;
+    return acc;
+  }, { });
 }
