@@ -18,13 +18,16 @@ interface QueuedPromise {
  * opening and closing the menu
  */
 class PromiseQueue {
+
   private queue: QueuedPromise[];
   private waiting: boolean;
+
 
   public constructor() {
     this.queue = [];
     this.waiting = false;
   }
+
 
   public enqueue(promiseRunner: () => Promise<void>): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -46,6 +49,7 @@ class PromiseQueue {
       this.dequeue();
     });
   }
+
 
   private dequeue(): void {
     // If another promise is running, don't run this one yet
@@ -75,6 +79,7 @@ export class Icon {
   private canvas: OffscreenCanvas;
   private context: OffscreenCanvasRenderingContext2D;
   private queue: PromiseQueue;
+
 
   /**
    * Defines the shape of the arrow graph using points normalized between zero

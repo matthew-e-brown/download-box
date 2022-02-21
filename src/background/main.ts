@@ -1,4 +1,5 @@
-import { search, computePercentage, Message } from '@/common';
+import { search, computePercentage, Message, MessageType, TICK_MS } from '@/common';
+import { SpeedTracker, serializeMap } from './speed';
 import { Icon, Color } from './draw';
 
 import downloads = chrome.downloads;
@@ -11,6 +12,7 @@ class DownloadManager {
 
   private static _instance: DownloadManager | null = null;
 
+  private speeds: Map<DownloadItem['id'], SpeedTracker>;
   private timer: ReturnType<typeof setInterval> | null;
   private icon: Icon;
 
@@ -22,6 +24,7 @@ class DownloadManager {
 
 
   private constructor() {
+    this.speeds = new Map();
     this.timer = null;
     this.icon = new Icon();
 
@@ -49,7 +52,7 @@ class DownloadManager {
    * Pings the popup to refresh and starts the timer if necessary.
    */
   private onCreated() {
-    runtime.sendMessage(Message.Ping);
+    runtime.sendMessage({ type: MessageType.Ping });
     this.start();
   }
 
@@ -60,7 +63,7 @@ class DownloadManager {
    * @param delta The change from the Chrome API.
    */
   private async onChanged(delta: DownloadDelta) {
-    runtime.sendMessage(Message.Ping);
+    runtime.sendMessage({ type: MessageType.Ping });
 
     // If it was the state that changed...
     if (delta.state !== undefined) {
@@ -69,9 +72,10 @@ class DownloadManager {
       if (state == 'interrupted' || state == 'complete') {
         const [ item ] = await search({ id: delta.id });
         this.unchecked.push(item);
+        this.speeds.delete(item.id);
 
         // Ask the popup to reply with a `PopupOpened` if it is open
-        runtime.sendMessage(Message.StatusCheck);
+        runtime.sendMessage({ type: MessageType.StatusCheck });
       }
     }
 
@@ -84,10 +88,14 @@ class DownloadManager {
    * @param message Message from the popup.
    */
   private onMessage(message: Message) {
-    if (message == Message.PopupOpened) {
+    if (message.type == MessageType.PopupOpened) {
       // If they opened the popup, clear the unchecked downloads
       this.unchecked = [];
       this.drawIcon();
+
+      // Also send the popup a copy of the speeds, just in case they need it
+      const payload = serializeMap(this.speeds);
+      runtime.sendMessage({ type: MessageType.Ping, payload });
     }
   }
 
@@ -96,7 +104,7 @@ class DownloadManager {
    * Pings the popup to refresh.
    */
   private onErased() {
-    runtime.sendMessage(Message.Ping);
+    runtime.sendMessage({ type: MessageType.Ping });
   }
 
 
@@ -114,7 +122,7 @@ class DownloadManager {
     console.log('Timer started');
 
     // Otherwise, start the timer
-    this.timer = setInterval(this.tick.bind(this), 500);
+    this.timer = setInterval(this.tick.bind(this), TICK_MS);
     this.tick();
   }
 
@@ -130,20 +138,35 @@ class DownloadManager {
     clearInterval(this.timer);
     this.timer = null;
 
+    // Just in case a download managed to sneak through without getting deleted
+    this.speeds.clear();
+
     // Drawing the icon after downloads complete is handled by the onChanged
     // listener.
   }
 
 
   /**
-   * Pings the popup to refresh and redraws the icon every 500 milliseconds.
-   * Stops itself when no more downloads are active.
+   * Pings the popup to refresh and redraws the icon every `TICK_MS`
+   * milliseconds. Stops itself when no more downloads are active.
    */
   private async tick() {
     const activeDownloads = await search({ state: 'in_progress' });
 
     if (activeDownloads.length > 0) {
-      runtime.sendMessage(Message.Ping);
+
+      // Update our speeds
+      for (const download of activeDownloads) {
+        const bytes = download.bytesReceived;
+        const tracker = this.speeds.get(download.id);
+
+        if (tracker) tracker.pushSize(bytes);
+        else this.speeds.set(download.id, new SpeedTracker(bytes));
+      }
+
+      // Send to the popup
+      const payload = serializeMap(this.speeds);
+      runtime.sendMessage({ type: MessageType.Ping, payload });
       this.drawIcon();
     } else {
       this.stop();

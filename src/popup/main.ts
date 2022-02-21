@@ -1,8 +1,10 @@
 import App from './App.vue';
-import { createApp } from 'vue';
+import { createApp, Ref, InjectionKey } from 'vue';
 
 import 'normalize.css';
 import '@fontsource/atkinson-hyperlegible/400.css';
+
+import { DownloadSpeeds } from '@/common';
 import './main.scss';
 
 import { library } from '@fortawesome/fontawesome-svg-core';
@@ -30,6 +32,8 @@ library.add(
   faLink,
 );
 
+
+export const speedKey = Symbol('SPEEDS') as InjectionKey<Ref<DownloadSpeeds>>;
 
 export default createApp(App)
   .component('fa-icon', FontAwesomeIcon)

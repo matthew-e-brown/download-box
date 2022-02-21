@@ -29,8 +29,9 @@
 
 
 <script lang="ts">
-import { defineComponent, ref, computed, Ref, onMounted, onUnmounted, onBeforeUpdate } from 'vue';
-import { search, getItemStartTime, Message } from '@/common';
+import { defineComponent, ref, computed, onMounted, onUnmounted, onBeforeUpdate, provide, Ref } from 'vue';
+import { search, getItemStartTime, Message, MessageType, DownloadSpeeds } from '@/common';
+import { speedKey } from './main';
 
 import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;
@@ -103,8 +104,12 @@ export default defineComponent({
     const items = ref<DownloadItem[]>([ ]);
     const pagination = usePagination(items);
 
-
     const itemRefs = ref<InstanceType<typeof Item>[]>([ ]);
+
+    // Give this ref to all the items
+    const itemSpeeds = ref<DownloadSpeeds>({ });
+    provide(speedKey, itemSpeeds);
+
 
     const closeAllOverlays = (except: number) => {
       itemRefs.value.forEach((item, i) => {
@@ -121,6 +126,8 @@ export default defineComponent({
       });
     }
 
+
+    const retryItem = (url: string) => downloads.download({ url });
 
     const eraseItem = async (toRemove: number) => {
       // Remove the item
@@ -153,34 +160,40 @@ export default defineComponent({
       items.value = await search({ ...defaultSearchOptions, startedBefore });
     }
 
-    const retryItem = (url: string) => downloads.download({ url });
 
-    // Refreshes the list. This handler is used for nearly all messages
-    const handler = () => refresh(false);
-    // Replies to the backend when it asks for the popup status
-    const statusHandler = (message: Message) => {
-      if (message == Message.StatusCheck) {
-        runtime.sendMessage(Message.PopupOpened);
+    const downloadHandler = () => refresh(false);
+
+    const messageHandler = (message: Message) => {
+      switch (message.type) {
+
+        case MessageType.StatusCheck:
+          runtime.sendMessage({ type: MessageType.PopupOpened });
+          break;
+
+        case MessageType.Ping:
+          if (message.payload) itemSpeeds.value = message.payload;
+          refresh(false);
+          break;
+
       }
     }
 
+
     onMounted(() => {
       refresh();
-      runtime.onMessage.addListener(handler);
-      runtime.onMessage.addListener(statusHandler);
-      downloads.onCreated.addListener(handler);
-      downloads.onChanged.addListener(handler);
+      runtime.onMessage.addListener(messageHandler);
+      downloads.onCreated.addListener(downloadHandler);
+      downloads.onChanged.addListener(downloadHandler);
 
       // Tell the background script that the popup was opened, so it can re-draw
       // the icon in the regular color
-      runtime.sendMessage(Message.PopupOpened);
+      runtime.sendMessage({ type: MessageType.PopupOpened });
     });
 
     onUnmounted(() => {
-      runtime.onMessage.removeListener(handler);
-      runtime.onMessage.removeListener(statusHandler);
-      downloads.onCreated.removeListener(handler);
-      downloads.onChanged.removeListener(handler);
+      runtime.onMessage.removeListener(messageHandler);
+      downloads.onCreated.removeListener(downloadHandler);
+      downloads.onChanged.removeListener(downloadHandler);
     });
 
     onBeforeUpdate(() => {
