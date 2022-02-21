@@ -30,7 +30,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, Ref, onMounted, onUnmounted, onBeforeUpdate } from 'vue';
-import { search, getItemStartTime, Message } from '@/common';
+import { search, getItemStartTime, Message, MessageType } from '@/common';
 
 import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;
@@ -159,8 +159,8 @@ export default defineComponent({
     const handler = () => refresh(false);
     // Replies to the backend when it asks for the popup status
     const statusHandler = (message: Message) => {
-      if (message == Message.StatusCheck) {
-        runtime.sendMessage(Message.PopupOpened);
+      if (message.type == MessageType.StatusCheck) {
+        runtime.sendMessage({ type: MessageType.PopupOpened });
       }
     }
 
@@ -173,7 +173,7 @@ export default defineComponent({
 
       // Tell the background script that the popup was opened, so it can re-draw
       // the icon in the regular color
-      runtime.sendMessage(Message.PopupOpened);
+      runtime.sendMessage({ type: MessageType.PopupOpened });
     });
 
     onUnmounted(() => {

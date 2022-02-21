@@ -1,4 +1,4 @@
-import { search, computePercentage, Message } from '@/common';
+import { search, computePercentage, Message, MessageType } from '@/common';
 import { Icon, Color } from './draw';
 
 import downloads = chrome.downloads;
@@ -51,7 +51,7 @@ class DownloadManager {
    * Pings the popup to refresh and starts the timer if necessary.
    */
   private onCreated() {
-    runtime.sendMessage(Message.Ping);
+    runtime.sendMessage({ type: MessageType.Ping });
     this.start();
   }
 
@@ -62,7 +62,7 @@ class DownloadManager {
    * @param delta The change from the Chrome API.
    */
   private async onChanged(delta: DownloadDelta) {
-    runtime.sendMessage(Message.Ping);
+    runtime.sendMessage({ type: MessageType.Ping });
 
     // If it was the state that changed...
     if (delta.state !== undefined) {
@@ -73,7 +73,7 @@ class DownloadManager {
         this.unchecked.push(item);
 
         // Ask the popup to reply with a `PopupOpened` if it is open
-        runtime.sendMessage(Message.StatusCheck);
+        runtime.sendMessage({ type: MessageType.StatusCheck });
       }
     }
 
@@ -86,7 +86,7 @@ class DownloadManager {
    * @param message Message from the popup.
    */
   private onMessage(message: Message) {
-    if (message == Message.PopupOpened) {
+    if (message.type == MessageType.PopupOpened) {
       // If they opened the popup, clear the unchecked downloads
       this.unchecked = [];
       this.drawIcon();
@@ -98,7 +98,7 @@ class DownloadManager {
    * Pings the popup to refresh.
    */
   private onErased() {
-    runtime.sendMessage(Message.Ping);
+    runtime.sendMessage({ type: MessageType.Ping });
   }
 
 
@@ -145,7 +145,7 @@ class DownloadManager {
     const activeDownloads = await search({ state: 'in_progress' });
 
     if (activeDownloads.length > 0) {
-      runtime.sendMessage(Message.Ping);
+      runtime.sendMessage({ type: MessageType.Ping });
       this.drawIcon();
     } else {
       this.stop();

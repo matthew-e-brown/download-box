@@ -53,23 +53,7 @@ export function getItemStartTime(item?: DownloadItem) {
 }
 
 
-export const isMac = (() => {
-  // Check if we're supposed to be using 'Show in folder' or 'Show in Finder':
-
-  let testString: string;
-  // @ts-ignore: userAgentData is experimental
-  if (navigator.userAgentData) {
-    // @ts-ignore: ^^
-    testString = navigator.userAgentData.platform;
-  } else {
-    testString = navigator.platform;
-  }
-
-  return /mac/i.test(testString);
-})();
-
-
-export enum Message {
+export enum MessageType {
   /** From the backend, to tell the frontend to refresh */
   Ping            = '__DOWNLOAD_BOX_PING__',
   /** From the frontend, to tell the backend that the popup has been opened */
@@ -77,3 +61,14 @@ export enum Message {
   /** From the backend; asks the frontend to reply if it is currently open */
   StatusCheck     = '__DOWNLOAD_BOX_CHECK_POPUP__',
 }
+
+
+export type DownloadSpeeds = {
+  [key: DownloadItem['id']]: number,
+}
+
+
+export type Message =
+  | { type: MessageType.Ping, payload?: DownloadSpeeds }
+  | { type: MessageType.PopupOpened }
+  | { type: MessageType.StatusCheck }

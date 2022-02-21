@@ -2,13 +2,16 @@ import { TICK_MS } from './main';
 
 const TICKS_PER_SECOND = 1000 / TICK_MS;
 
+interface RecentAmount {
+  time: Date,
+  size: number,
+}
+
+
 export class SpeedTracker {
 
   private speeds: number[];
-  private mostRecent: {
-    time: Date,
-    size: number,
-  };
+  private mostRecent: RecentAmount;
 
 
   public constructor(startingSize: number = 0) {
@@ -42,7 +45,7 @@ export class SpeedTracker {
 
 
   public get speed(): number {
-    if (this.speeds.length == 0) return 0;
+    if (this.speeds.length == 0) return -1;
 
     // Take the average speed (of the ones in the `speeds` array)
     else return this.speeds.reduce((a, c) => a + c) / this.speeds.length;
