@@ -33,7 +33,8 @@ library.add(
 );
 
 
-export const speedKey = Symbol('SPEEDS') as InjectionKey<Ref<DownloadSpeeds>>;
+export const popupKey = Symbol('Popup') as InjectionKey<() => void>;
+
 
 export default createApp(App)
   .component('fa-icon', FontAwesomeIcon)

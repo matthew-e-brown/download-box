@@ -59,7 +59,7 @@
       :gradient-end="barColor.end"
     />
 
-    <transition name="slide-fade">
+    <Transition name="slide-fade">
       <ItemOverlay
         v-if="isOverlayOpen"
         @click.stop="closeOverlay"
@@ -75,7 +75,7 @@
           @click="eraseFromList"
         ><fa-icon icon="xmark" fixed-width /></button>
       </ItemOverlay>
-    </transition>
+    </Transition>
 
   </li>
 </template>
@@ -83,8 +83,8 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, watch, toRefs, inject, Ref, PropType } from 'vue';
-import { formatSize, computePercentage } from '@/common';
-import { speedKey } from '../main';
+import { formatSize, computePercentage, DownloadSpeeds } from '@/common';
+import { popupKey } from '../main';
 
 import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;
@@ -114,11 +114,9 @@ function useConditions(item: Ref<DownloadItem>) {
 }
 
 
-function useFileInfo(item: Ref<DownloadItem>) {
+function useFileInfo(item: Ref<DownloadItem>, speeds: Ref<DownloadSpeeds | undefined>) {
 
   const { showBar: inProgress } = useConditions(item);
-  const speeds = inject(speedKey);
-
 
   const filename = computed(() => {
     // Determine basename of file
@@ -153,7 +151,7 @@ function useFileInfo(item: Ref<DownloadItem>) {
 
 
   const downSpeed = computed(() => {
-    if (inProgress.value && speeds) {
+    if (inProgress.value && speeds.value) {
       const speed = speeds.value[item.value.id];
       return `${formatSize(speed ?? -1)}/s`;
     } else {
@@ -193,6 +191,10 @@ export default defineComponent({
     item: {
       type: Object as PropType<DownloadItem>,
       required: true,
+    },
+    speedsMap: {
+      type: Object as PropType<DownloadSpeeds>,
+      required: false,
     }
   },
   emits: {
@@ -201,7 +203,8 @@ export default defineComponent({
     overlay: null,
   },
   setup(props, { emit }) {
-    const { item } = toRefs(props);
+    const { item, speedsMap } = toRefs(props);
+    const showCopied = inject(popupKey);
 
     const showFile = () => downloads.show(item.value.id);
     const openFile = () => {
@@ -213,7 +216,10 @@ export default defineComponent({
 
     const retryDownload = () => emit('retry', item.value.url);
     const eraseFromList = () => emit('erase', item.value.id);
-    const copyLink = () => navigator.clipboard.writeText(item.value.finalUrl);
+    const copyLink = async () => {
+      await navigator.clipboard.writeText(item.value.finalUrl);
+      showCopied?.();
+    }
 
     const isOverlayOpen = ref(false);
     const closeOverlay = () => isOverlayOpen.value = false;
@@ -247,7 +253,7 @@ export default defineComponent({
 
     return {
       ...useConditions(item),
-      ...useFileInfo(item),
+      ...useFileInfo(item, speedsMap),
       openFile,
       showFile,
       pauseDownload,

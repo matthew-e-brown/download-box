@@ -7,6 +7,7 @@
         v-for="(item, i) in items"
         :key="i"
         :item="item"
+        :speeds-map="itemSpeeds"
         :ref="(el: any) => itemRefs[i] = el"
         @erase="eraseItem"
         @retry="retryItem"
@@ -24,6 +25,10 @@
         <fa-icon icon="right" fixed-width />
       </button>
     </div>
+
+    <Transition name="popup">
+      <div v-if="showCopiedPopup" class="popup">URL copied</div>
+    </Transition>
   </main>
 </template>
 
@@ -31,7 +36,7 @@
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, onUnmounted, onBeforeUpdate, provide, Ref } from 'vue';
 import { search, getItemStartTime, Message, MessageType, DownloadSpeeds } from '@/common';
-import { speedKey } from './main';
+import { popupKey } from './main';
 
 import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;
@@ -96,6 +101,22 @@ function usePagination(items: Ref<DownloadItem[]>) {
 }
 
 
+function usePopup(timeout: number) {
+  const visible = ref(false);
+
+  const hide = () => {
+    visible.value = false;
+  }
+
+  const show = () => {
+    visible.value = true;
+    setTimeout(hide, timeout);
+  }
+
+  return { visible, show, hide };
+}
+
+
 export default defineComponent({
   name: 'App',
   components: { Item },
@@ -105,10 +126,10 @@ export default defineComponent({
     const pagination = usePagination(items);
 
     const itemRefs = ref<InstanceType<typeof Item>[]>([ ]);
-
-    // Give this ref to all the items
     const itemSpeeds = ref<DownloadSpeeds>({ });
-    provide(speedKey, itemSpeeds);
+
+    const copiedPopup = usePopup(3650);
+    provide(popupKey, copiedPopup.show);
 
 
     const closeAllOverlays = (exceptIndex: number) => {
@@ -196,10 +217,12 @@ export default defineComponent({
     return {
       items,
       itemRefs,
+      itemSpeeds,
       eraseItem,
       retryItem,
       closeAllOverlays,
       ...pagination,
+      showCopiedPopup: copiedPopup.visible,
     };
   }
 });
@@ -207,10 +230,18 @@ export default defineComponent({
 
 
 <style lang="scss" scoped>
+main {
+  padding-top: 1rem;
+  position: relative;
+}
+
 h1 {
   font-size: 24px;
   font-weight: normal;
   text-align: center;
+
+  margin-top: 0;
+  margin-bottom: 1rem;
 }
 
 ul {
@@ -252,4 +283,27 @@ ul {
     cursor: pointer;
   }
 }
+
+.popup {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+
+  font-style: italic;
+  font-size: 13px;
+
+  padding: 4px 10px 4px 6px;
+  border-radius: 4px;
+  text-align: center;
+
+  background-color: hsla(0, 0%, 0%, 0.75);
+}
+
+
+.popup-enter-active, .popup-leave-active {
+  transition: transform 325ms cubic-bezier(0.70, -0.25, 0.45, 1.25);
+}
+
+.popup-enter-from, .popup-leave-to { transform: translateX(-120%); }
+.popup-enter-to, .popup-leave-from { transform: translateX(0); }
 </style>
