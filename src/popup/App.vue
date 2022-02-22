@@ -1,5 +1,5 @@
 <template>
-  <main @click="closeModals(-1)" @click.right="closeModals(-1)">
+  <main @click="closeAllOverlays(-1)" @click.right="closeAllOverlays(-1)">
     <h1>Downloads</h1>
 
     <ul id="downloads-list" v-if="items.length > 0">
@@ -7,10 +7,11 @@
         v-for="(item, i) in items"
         :key="i"
         :item="item"
+        :speeds-map="itemSpeeds"
         :ref="(el: any) => itemRefs[i] = el"
         @erase="eraseItem"
         @retry="retryItem"
-        @modal="closeModals(i)"
+        @overlay="closeAllOverlays(i)"
       />
     </ul>
     <div id="empty" v-else>There's nothing here...</div>
@@ -24,20 +25,25 @@
         <fa-icon icon="right" fixed-width />
       </button>
     </div>
+
+    <Transition name="popup">
+      <div v-if="showCopiedPopup" class="popup">URL copied</div>
+    </Transition>
   </main>
 </template>
 
 
 <script lang="ts">
-import { defineComponent, ref, computed, Ref, onMounted, onUnmounted, onBeforeUpdate } from 'vue';
-import { search, getItemStartTime } from '@/common';
+import { defineComponent, ref, computed, onMounted, onUnmounted, onBeforeUpdate, provide, Ref } from 'vue';
+import { search, getItemStartTime, Message, MessageType, DownloadSpeeds } from '@/common';
+import { popupKey } from './main';
 
 import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;
 import DownloadQuery = downloads.DownloadQuery;
 import runtime = chrome.runtime;
 
-import Item from './Item.vue';
+import Item from './components/Item.vue';
 
 
 const defaultSearchOptions: DownloadQuery = {
@@ -95,6 +101,22 @@ function usePagination(items: Ref<DownloadItem[]>) {
 }
 
 
+function usePopup(timeout: number) {
+  const visible = ref(false);
+
+  const hide = () => {
+    visible.value = false;
+  }
+
+  const show = () => {
+    visible.value = true;
+    setTimeout(hide, timeout);
+  }
+
+  return { visible, show, hide };
+}
+
+
 export default defineComponent({
   name: 'App',
   components: { Item },
@@ -103,18 +125,21 @@ export default defineComponent({
     const items = ref<DownloadItem[]>([ ]);
     const pagination = usePagination(items);
 
-
     const itemRefs = ref<InstanceType<typeof Item>[]>([ ]);
+    const itemSpeeds = ref<DownloadSpeeds>({ });
 
-    const closeModals = (except: number) => {
+    const copiedPopup = usePopup(3650);
+    provide(popupKey, copiedPopup.show);
+
+
+    const closeAllOverlays = (exceptIndex: number) => {
       itemRefs.value.forEach((item, i) => {
-        if (i != except) item?.closeModal();
+        if (i != exceptIndex) item?.closeOverlay();
       });
     }
 
 
-    const refresh = async (clearModals = true) => {
-      if (clearModals) closeModals(-1);
+    const refresh = async () => {
       items.value = await search({
         ...defaultSearchOptions,
         startedBefore: getItemStartTime(items.value[0])
@@ -122,66 +147,82 @@ export default defineComponent({
     }
 
 
+    const retryItem = (url: string) => downloads.download({ url });
+
     const eraseItem = async (toRemove: number) => {
       // Remove the item
       await new Promise(resolve => {
-        downloads.erase({ id: toRemove }, resolve)
+        downloads.erase({ id: toRemove }, resolve);
       });
 
       /**
        * @note
        * We handle the `refresh()` call differently in this case because of the
-       * possibility that we're on a deeper page. Just calling `refresh` without
-       * taking care to check if they deleted the first item in the page (which
-       * is used in the timeStack to determine what page we're on) can cause
-       * some weirdness.
+       * possibility that they cleared the first item on the page. Just calling
+       * `refresh` without taking care to check which one they deleted might
+       * cause some weirdness, since the time of the first item on the page is
+       * use in the `pageStack`.
        *
        * This is the same reason we don't have a downloads.onErased listener.
        */
 
-      let startedBefore: string;
-      const index = items.value.findIndex(({ id }) => id == toRemove);
-
-      // If this is not the first page, and they deleted the first item, use the
-      // second item as the `startTime` item
-      if (pagination.pageNumber.value > 1 && index == 0) {
-        startedBefore = getItemStartTime(items.value[1]);
-      } else {
-        startedBefore = getItemStartTime();
-      }
+      const deleted = items.value.findIndex(({ id }) => id == toRemove);
+      const startedBefore = getItemStartTime(items.value[deleted == 0 ? 1 : 0]);
 
       items.value = await search({ ...defaultSearchOptions, startedBefore });
+      closeAllOverlays(-1);
     }
 
 
-    // The 'refresh' is be handled by the handler
-    const retryItem = (url: string) => downloads.download({ url });
-    const handler = () => refresh(false);
+    const downloadHandler = () => refresh();
+
+    const messageHandler = (message: Message) => {
+      switch (message.type) {
+
+        case MessageType.StatusCheck:
+          runtime.sendMessage({ type: MessageType.PopupOpened });
+          break;
+
+        case MessageType.Ping:
+          if (message.payload) itemSpeeds.value = message.payload;
+          refresh();
+          break;
+
+      }
+    }
+
 
     onMounted(() => {
       refresh();
-      runtime.onMessage.addListener(handler);
-      downloads.onCreated.addListener(handler);
-      downloads.onChanged.addListener(handler);
+      runtime.onMessage.addListener(messageHandler);
+      downloads.onCreated.addListener(downloadHandler);
+      downloads.onChanged.addListener(downloadHandler);
+
+      // Tell the background script that the popup was opened, so it can re-draw
+      // the icon in the regular color
+      runtime.sendMessage({ type: MessageType.PopupOpened });
     });
 
     onUnmounted(() => {
-      runtime.onMessage.removeListener(handler);
-      downloads.onCreated.removeListener(handler);
-      downloads.onChanged.removeListener(handler);
+      runtime.onMessage.removeListener(messageHandler);
+      downloads.onCreated.removeListener(downloadHandler);
+      downloads.onChanged.removeListener(downloadHandler);
     });
 
     onBeforeUpdate(() => {
+      // Clear the itemRefs because they are re-added each render
       itemRefs.value = [];
     });
 
     return {
       items,
       itemRefs,
+      itemSpeeds,
       eraseItem,
       retryItem,
-      closeModals,
+      closeAllOverlays,
       ...pagination,
+      showCopiedPopup: copiedPopup.visible,
     };
   }
 });
@@ -189,10 +230,18 @@ export default defineComponent({
 
 
 <style lang="scss" scoped>
+main {
+  padding-top: 1rem;
+  position: relative;
+}
+
 h1 {
   font-size: 24px;
   font-weight: normal;
   text-align: center;
+
+  margin-top: 0;
+  margin-bottom: 1rem;
 }
 
 ul {
@@ -234,4 +283,27 @@ ul {
     cursor: pointer;
   }
 }
+
+.popup {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+
+  font-style: italic;
+  font-size: 13px;
+
+  padding: 4px 10px 4px 6px;
+  border-radius: 4px;
+  text-align: center;
+
+  background-color: hsla(0, 0%, 0%, 0.75);
+}
+
+
+.popup-enter-active, .popup-leave-active {
+  transition: transform 325ms cubic-bezier(0.70, -0.25, 0.45, 1.25);
+}
+
+.popup-enter-from, .popup-leave-to { transform: translateX(-120%); }
+.popup-enter-to, .popup-leave-from { transform: translateX(0); }
 </style>

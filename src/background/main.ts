@@ -1,5 +1,6 @@
-import { search, computePercentage, Message } from '@/common';
-import { Icon, Color } from './draw';
+import { search, computePercentage, Message, MessageType, TICK_MS } from '@/common';
+import { SpeedTracker, serializeMap } from './speed';
+import { Icon, Color } from './icon';
 
 import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;
@@ -11,6 +12,7 @@ class DownloadManager {
 
   private static _instance: DownloadManager | null = null;
 
+  private speeds: Map<DownloadItem['id'], SpeedTracker>;
   private timer: ReturnType<typeof setInterval> | null;
   private icon: Icon;
 
@@ -22,6 +24,7 @@ class DownloadManager {
 
 
   private constructor() {
+    this.speeds = new Map();
     this.timer = null;
     this.icon = new Icon();
 
@@ -49,7 +52,7 @@ class DownloadManager {
    * Pings the popup to refresh and starts the timer if necessary.
    */
   private onCreated() {
-    runtime.sendMessage(Message.Ping);
+    runtime.sendMessage({ type: MessageType.Ping });
     this.start();
   }
 
@@ -60,7 +63,7 @@ class DownloadManager {
    * @param delta The change from the Chrome API.
    */
   private async onChanged(delta: DownloadDelta) {
-    runtime.sendMessage(Message.Ping);
+    runtime.sendMessage({ type: MessageType.Ping });
 
     // If it was the state that changed...
     if (delta.state !== undefined) {
@@ -69,6 +72,10 @@ class DownloadManager {
       if (state == 'interrupted' || state == 'complete') {
         const [ item ] = await search({ id: delta.id });
         this.unchecked.push(item);
+        this.speeds.delete(item.id);
+
+        // Ask the popup to reply with a `PopupOpened` if it is open
+        runtime.sendMessage({ type: MessageType.StatusCheck });
       }
     }
 
@@ -81,10 +88,14 @@ class DownloadManager {
    * @param message Message from the popup.
    */
   private onMessage(message: Message) {
-    if (message == Message.PopupOpened) {
+    if (message.type == MessageType.PopupOpened) {
       // If they opened the popup, clear the unchecked downloads
-      while (this.unchecked.length) this.unchecked.pop();
+      this.unchecked = [];
       this.drawIcon();
+
+      // Also send the popup a copy of the speeds, just in case they need it
+      const payload = serializeMap(this.speeds);
+      runtime.sendMessage({ type: MessageType.Ping, payload });
     }
   }
 
@@ -93,7 +104,7 @@ class DownloadManager {
    * Pings the popup to refresh.
    */
   private onErased() {
-    runtime.sendMessage(Message.Ping);
+    runtime.sendMessage({ type: MessageType.Ping });
   }
 
 
@@ -108,8 +119,10 @@ class DownloadManager {
     const activeDownloads = await search({ state: 'in_progress' });
     if (activeDownloads.length <= 0) return;
 
+    console.log('Timer started');
+
     // Otherwise, start the timer
-    this.timer = setInterval(this.tick.bind(this), 500);
+    this.timer = setInterval(this.tick.bind(this), TICK_MS);
     this.tick();
   }
 
@@ -120,8 +133,13 @@ class DownloadManager {
   private stop() {
     if (this.timer === null) return;
 
+    console.log('Timer stopped');
+
     clearInterval(this.timer);
     this.timer = null;
+
+    // Just in case a download managed to sneak through without getting deleted
+    this.speeds.clear();
 
     // Drawing the icon after downloads complete is handled by the onChanged
     // listener.
@@ -129,14 +147,26 @@ class DownloadManager {
 
 
   /**
-   * Pings the popup to refresh and redraws the icon every 500 milliseconds.
-   * Stops itself when no more downloads are active.
+   * Pings the popup to refresh and redraws the icon every `TICK_MS`
+   * milliseconds. Stops itself when no more downloads are active.
    */
   private async tick() {
     const activeDownloads = await search({ state: 'in_progress' });
 
     if (activeDownloads.length > 0) {
-      runtime.sendMessage(Message.Ping);
+
+      // Update our speeds
+      for (const download of activeDownloads) {
+        const bytes = download.bytesReceived;
+        const tracker = this.speeds.get(download.id);
+
+        if (tracker) tracker.pushSize(bytes);
+        else this.speeds.set(download.id, new SpeedTracker(bytes));
+      }
+
+      // Send to the popup
+      const payload = serializeMap(this.speeds);
+      runtime.sendMessage({ type: MessageType.Ping, payload });
       this.drawIcon();
     } else {
       this.stop();
@@ -150,11 +180,32 @@ class DownloadManager {
   private async drawIcon() {
     const activeDownloads = await search({ state: 'in_progress' });
 
-    // Check if anything is actually downloading at the moment
+    // Determine the colour to draw
+    const color = (() => {
+      // First priority: check if any of the freshly completed items
+      // errored-out (excluding those cancelled by the user).
+      if (this.unchecked.some(d => d.state == 'interrupted' && !d.error?.startsWith('USER_')))
+        return Color.Error;
+
+      // Second: check if any of the currently active items are paused.
+      if (activeDownloads.some(item => item.paused))
+        return Color.Paused;
+
+      // Third: check if any of the freshly completed items were successful.
+      if (this.unchecked.some(c => c.state == 'complete'))
+        return Color.Complete;
+
+      // Otherwise, just use the normal color.
+      return Color.Normal;
+    })();
+
+    // If anything is actually downloading at the moment, check the total
+    // percentage
     if (activeDownloads.length > 0) {
       // Get total completion percentage across all downloads
       const allDownloads = [ ...this.unchecked, ...activeDownloads ];
 
+      // Compute the percentage of all unchecked and active downloads combined
       const { num, den } = allDownloads.reduce((acc, cur) => {
         // Handle edge-case where downloads sometimes (not sure how) end up
         // without a `bytesReceived` property
@@ -162,32 +213,17 @@ class DownloadManager {
           return acc;
         } else {
           let { num, den } = computePercentage(cur);
-          num += acc.num;
-          den += acc.den;
-          return { num, den };
+          acc.num += num;
+          acc.den += den;
+          return acc;
         }
       }, { num: 0, den: 0 });
 
-      // Start by determining the colour to draw
-      const color = (() => {
-        // First priority: check if any of the freshly completed items errored:
-        if (this.unchecked.some(d => d.state == 'interrupted')) return Color.Error;
-
-        // Second: check if any of the currently active items are paused:
-        if (activeDownloads.some(item => item.paused)) return Color.Paused;
-
-        // Third: check if any of the freshly completed items were successful:
-        if (this.unchecked.some(c => c.state == 'complete')) return Color.Complete;
-
-        // Otherwise, just use the normal color
-        return Color.Normal;
-      })();
-
-      await this.icon.draw(num / den, color);
+      this.icon.draw(color, num / den);
     } else {
 
-      // Just draw the regular icon
-      await this.icon.draw();
+      // Just draw icon without a progress bar
+      this.icon.draw(color);
     }
   }
 

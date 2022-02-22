@@ -1,10 +1,10 @@
 import App from './App.vue';
-import { createApp } from 'vue';
-
-import { Message } from '@/common';
+import { createApp, Ref, InjectionKey } from 'vue';
 
 import 'normalize.css';
 import '@fontsource/atkinson-hyperlegible/400.css';
+
+import { DownloadSpeeds } from '@/common';
 import './main.scss';
 
 import { library } from '@fortawesome/fontawesome-svg-core';
@@ -18,6 +18,7 @@ import {
   faPlay,
   faPause,
   faXmark,
+  faLink,
 } from '@fortawesome/pro-solid-svg-icons';
 
 library.add(
@@ -28,11 +29,12 @@ library.add(
   faPlay,
   faPause,
   faXmark,
+  faLink,
 );
 
-// Tell the background script that the popup was opened, so it can re-draw the
-// icon in the regular color
-chrome.runtime.sendMessage(Message.PopupOpened);
+
+export const popupKey = Symbol('Popup') as InjectionKey<() => void>;
+
 
 export default createApp(App)
   .component('fa-icon', FontAwesomeIcon)

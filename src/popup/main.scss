@@ -5,12 +5,15 @@
 body {
   margin: 0;
   padding: 0;
-  width: 420px;
+  width: 440px;
   user-select: none;
 
   font-family: 'Atkinson Hyperlegible', sans-serif;
   font-weight: 400;
   font-size: 16px;
+
+  color: var(--main-fg);
+  background-color: var(--main-bg);
 
   // Palette:
 
@@ -50,10 +53,7 @@ body {
   --button-items-border: #{$blue-50};
   --button-pages-border: #{$blue-40};
 
-  --button-confirm-bg: #{$red-50};
-  --button-confirm-fg: white;
-  --button-confirm-border: #{$red-20};
-  --modal-bg: var(--main-bg);
+  --overlay-bg: var(--main-bg);
 
   // Dark theme:
 
@@ -80,14 +80,15 @@ body {
     --button-items-border: #{$blue-50};
     --button-pages-border: #{$blue-20};
 
-    --button-confirm-bg: #{$red-50};
-    --button-confirm-fg: var(--main-fg);
-    --button-confirm-border: #{$red-20};
-    --modal-bg: black;
+    --overlay-bg: black;
   }
 
-  color: var(--main-fg);
-  background-color: var(--main-bg);
+  // Don't change with theme:
+
+  --button-warning-fg: white;
+  --button-warning-bg: #{$red-50};
+  --button-warning-border: #{$red-20};
+
 }
 
 
@@ -109,4 +110,19 @@ button.icon-button {
   background-color: var(--button-color);
 
   cursor: pointer;
+}
+
+
+.button-row {
+
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: flex-end;
+  column-gap: 14px;
+
+  button {
+    margin: 0;
+    --button-color: var(--button-items-bg);
+    --border-color: var(--button-items-border);
+  }
 }

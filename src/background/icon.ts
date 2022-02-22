@@ -5,10 +5,81 @@ export enum Color {
   Complete  = 'hsl(130, 64%, 50%)',
 }
 
+
+interface QueuedPromise {
+  promiseRunner: () => Promise<void>,
+  resolve: () => void,
+  reject: (reason?: any) => void,
+}
+
+
+/**
+ * We employ a Promise queue for drawing the icons to prevent flickering when
+ * opening and closing the menu
+ */
+class PromiseQueue {
+
+  private queue: QueuedPromise[];
+  private waiting: boolean;
+
+
+  public constructor() {
+    this.queue = [];
+    this.waiting = false;
+  }
+
+
+  public enqueue(promiseRunner: () => Promise<void>): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Only allow for at most 2 icon-drawings to be on the stack at a time
+      if (this.queue.length >= 2) {
+        console.log('Icon-drawing Promise queue size-limit reached');
+        // Quietly resolve, completely forget about
+        const popped = this.queue.shift();
+        popped?.resolve();
+      }
+
+      this.queue.push({
+        promiseRunner,
+        resolve,
+        reject,
+      });
+
+      // Attempt to immediately pop this promise off the stack
+      this.dequeue();
+    });
+  }
+
+
+  private dequeue(): void {
+    // If another promise is running, don't run this one yet
+    if (this.waiting) return;
+
+    const item = this.queue.shift();
+    // If there are no more promises, don't bother
+    if (!item) return;
+
+    // Run the current promise
+    this.waiting = true;
+    item.promiseRunner()
+      .then(item.resolve)
+      .catch(item.reject)
+      .finally(() => {
+        // Attempt to run the next one
+        this.waiting = false;
+        this.dequeue();
+      });
+  }
+
+}
+
+
 export class Icon {
 
   private canvas: OffscreenCanvas;
   private context: OffscreenCanvasRenderingContext2D;
+  private queue: PromiseQueue;
+
 
   /**
    * Defines the shape of the arrow graph using points normalized between zero
@@ -28,6 +99,7 @@ export class Icon {
   public constructor() {
     this.canvas = new OffscreenCanvas(160, 160);
     this.context = this.canvas.getContext('2d')!;
+    this.queue = new PromiseQueue();
   }
 
 
@@ -56,7 +128,11 @@ export class Icon {
   }
 
 
-  public async draw(percentage?: number, color: Color = Color.Normal) {
+  public async draw(): Promise<void>;
+  public async draw(color: Color): Promise<void>;
+  public async draw(color: Color, percentage: number): Promise<void>;
+
+  public async draw(color: Color = Color.Normal, percentage?: number) {
     this.context.clearRect(0, 0, 160, 160);
 
     if (percentage) {
@@ -80,7 +156,7 @@ export class Icon {
       this.context.fill(path);
     }
 
-    await this.setAsIcon();
+    await this.queue.enqueue(() => this.setAsIcon());
   }
 
 }

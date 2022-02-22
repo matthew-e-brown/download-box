@@ -3,7 +3,7 @@
     role="button"
     tabindex="0"
     @click="openFile"
-    @click.right.stop.prevent="openModal"
+    @click.right.stop.prevent="openOverlay"
     class="download-item"
     :class="itemClasses"
   >
@@ -11,10 +11,16 @@
 
     <div class="info">
       <div class="name">{{ filename }}</div>
-      <div class="size">{{ filesize }}</div>
+      <div class="size">
+        <div class="file-size">{{ filesize }}</div>
+        <template v-if="showBar || showResume">
+          <div class="dot">&CenterDot;</div>
+          <div class="down-speed">{{ showResume ? 'Stopped' : downSpeed }}</div>
+        </template>
+      </div>
     </div>
 
-    <div class="buttons">
+    <div class="button-row">
       <!-- If the item can be resumed or paused, offer to toggle -->
       <button
         type="button"
@@ -53,28 +59,38 @@
       :gradient-end="barColor.end"
     />
 
-    <transition name="slide-fade">
-      <Modal
-        v-if="modalOpen"
-        @click.stop
-        @yes="() => { eraseFromList(); closeModal(); }"
-        @no="closeModal"
-      />
-    </transition>
+    <Transition name="slide-fade">
+      <ItemOverlay
+        v-if="isOverlayOpen"
+        @click.stop="closeOverlay"
+      >
+        <button
+          type="button"
+          class="icon-button link-button"
+          @click="copyLink"
+        ><fa-icon icon="link" fixed-width /></button>
+        <button
+          type="button"
+          class="icon-button erase-button"
+          @click="eraseFromList"
+        ><fa-icon icon="xmark" fixed-width /></button>
+      </ItemOverlay>
+    </Transition>
 
   </li>
 </template>
 
 
 <script lang="ts">
-import { defineComponent, PropType, ref, computed, watch, toRefs, Ref } from 'vue';
-import { formatSize, computePercentage } from '@/common';
+import { defineComponent, ref, computed, watch, toRefs, inject, Ref, PropType } from 'vue';
+import { formatSize, computePercentage, DownloadSpeeds } from '@/common';
+import { popupKey } from '../main';
 
 import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;
 
 import ProgressBar from './Bar.vue';
-import Modal from './Modal.vue';
+import ItemOverlay from './ItemOverlay.vue';
 
 
 function useConditions(item: Ref<DownloadItem>) {
@@ -98,7 +114,7 @@ function useConditions(item: Ref<DownloadItem>) {
 }
 
 
-function useFileInfo(item: Ref<DownloadItem>) {
+function useFileInfo(item: Ref<DownloadItem>, speeds: Ref<DownloadSpeeds | undefined>) {
 
   const { showBar: inProgress } = useConditions(item);
 
@@ -113,11 +129,11 @@ function useFileInfo(item: Ref<DownloadItem>) {
     return filename.replace(/\.crdownload$/, '');
   });
 
+
   const percent = computed(() => {
     if (inProgress.value) {
       const { num, den } = computePercentage(item.value);
-      if (den == 0) return 0;
-      else return num / den;
+      return (den == 0) ? 0 : num / den;
     } else {
       return 1;
     }
@@ -133,25 +149,35 @@ function useFileInfo(item: Ref<DownloadItem>) {
     }
   });
 
+
+  const downSpeed = computed(() => {
+    if (inProgress.value && speeds.value) {
+      const speed = speeds.value[item.value.id];
+      return `${formatSize(speed ?? -1)}/s`;
+    } else {
+      return `${formatSize(0)}/s`;
+    }
+  });
+
+
   // Defaults to a blank, 1x1, transparent `.gif` file (placeholder)
   const icon = ref('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
 
   // Use a `watch` instead of a regular computed because `getFileIcon` is
   // asynchronous
-  watch(item, async () => {
+  watch(() => item.value.id, async () => {
     const src = await new Promise<string>(resolve => {
       downloads.getFileIcon(item.value.id, { size: 32 }, resolve)
     });
 
     if (src) icon.value = src;
-  }, {
-    immediate: true
-  });
+  }, { immediate: true });
 
 
   return {
     filename,
     filesize,
+    downSpeed,
     percent,
     icon,
   };
@@ -160,20 +186,25 @@ function useFileInfo(item: Ref<DownloadItem>) {
 
 export default defineComponent({
   name: 'Item',
-  components: { ProgressBar, Modal },
+  components: { ProgressBar, ItemOverlay },
   props: {
     item: {
       type: Object as PropType<DownloadItem>,
       required: true,
+    },
+    speedsMap: {
+      type: Object as PropType<DownloadSpeeds>,
+      required: false,
     }
   },
   emits: {
     erase: (id: number) => typeof id == 'number',
     retry: (url: string) => typeof url == 'string',
-    modal: null,
+    overlay: null,
   },
   setup(props, { emit }) {
-    const { item } = toRefs(props);
+    const { item, speedsMap } = toRefs(props);
+    const showCopied = inject(popupKey);
 
     const showFile = () => downloads.show(item.value.id);
     const openFile = () => {
@@ -185,13 +216,16 @@ export default defineComponent({
 
     const retryDownload = () => emit('retry', item.value.url);
     const eraseFromList = () => emit('erase', item.value.id);
+    const copyLink = async () => {
+      await navigator.clipboard.writeText(item.value.finalUrl);
+      showCopied?.();
+    }
 
-
-    const modalOpen = ref(false);
-    const closeModal = () => modalOpen.value = false;
-    const openModal = () => {
-      modalOpen.value = true;
-      emit('modal');
+    const isOverlayOpen = ref(false);
+    const closeOverlay = () => isOverlayOpen.value = false;
+    const openOverlay = () => {
+      isOverlayOpen.value = true;
+      emit('overlay');
     }
 
     const barColor = computed<{ start: string, end: string }>(() => {
@@ -213,22 +247,23 @@ export default defineComponent({
 
     const itemClasses = computed(() => ({
       'error': item.value.state == 'interrupted' || !item.value.exists,
-      'modal-open': modalOpen.value,
+      'overlay-open': isOverlayOpen.value,
     }));
 
 
     return {
       ...useConditions(item),
-      ...useFileInfo(item),
+      ...useFileInfo(item, speedsMap),
       openFile,
       showFile,
       pauseDownload,
       resumeDownload,
       retryDownload,
       eraseFromList,
-      modalOpen,
-      closeModal,
-      openModal,
+      copyLink,
+      isOverlayOpen,
+      closeOverlay,
+      openOverlay,
       barColor,
       itemClasses,
     };
@@ -245,7 +280,7 @@ export default defineComponent({
   position: relative;
 
   border: 2px solid transparent;
-  &:not(.modal-open):hover {
+  &:not(.overlay-open):hover {
     border-color: var(--item-border);
     &.error { border-color: var(--item-border-error); }
   }
@@ -281,21 +316,20 @@ export default defineComponent({
 }
 
 .size {
+  display: flex;
+  flex-flow: row nowrap;
+  column-gap: 6px;
   font-size: 12px;
 }
 
-.buttons {
+.dot {
+  opacity: 0.75;
+}
 
-  display: flex;
-  flex-flow: row nowrap;
-  justify-content: flex-end;
-  column-gap: 14px;
-
-  button {
-    margin: 0;
-    --button-color: var(--button-items-bg);
-    --border-color: var(--button-items-border);
-  }
+.erase-button {
+  color: var(--button-warning-fg);
+  --button-color: var(--button-warning-bg);
+  --border-color: var(--button-warning-border);
 }
 
 .error {

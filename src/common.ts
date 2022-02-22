@@ -2,6 +2,11 @@ import DownloadItem = chrome.downloads.DownloadItem;
 import DownloadQuery = chrome.downloads.DownloadQuery;
 
 
+// Size of a tick in milliseconds
+export const TICK_MS = 500;
+export const TICKS_PER_SECOND = 1000 / TICK_MS;
+
+
 export function search(query: DownloadQuery) {
   return new Promise<DownloadItem[]>(resolve => {
     chrome.downloads.search(query, resolve);
@@ -17,7 +22,7 @@ export function formatSize(bytes: number): string {
   const k = 1000;
   const s = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
   const i = Math.floor(Math.log10(bytes) / Math.log10(k));
-  const p = i && 2; // 0 decimals if index is 0; no decimals for 'Bytes'
+  const p = i && 2; // 0 decimals if index is 0: no decimals for 'Bytes'
 
   return `${(bytes / Math.pow(k, i)).toFixed(p)} ${s[i]}`;
 }
@@ -53,25 +58,22 @@ export function getItemStartTime(item?: DownloadItem) {
 }
 
 
-export const isMac = (() => {
-  // Check if we're supposed to be using 'Show in folder' or 'Show in Finder':
-
-  let testString: string;
-  // @ts-ignore: userAgentData is experimental
-  if (navigator.userAgentData) {
-    // @ts-ignore: ^^
-    testString = navigator.userAgentData.platform;
-  } else {
-    testString = navigator.platform;
-  }
-
-  return /mac/i.test(testString);
-})();
-
-
-export enum Message {
+export enum MessageType {
   /** From the backend, to tell the frontend to refresh */
   Ping            = '__DOWNLOAD_BOX_PING__',
   /** From the frontend, to tell the backend that the popup has been opened */
   PopupOpened     = '__DOWNLOAD_BOX_POPUP_OPENED__',
+  /** From the backend; asks the frontend to reply if it is currently open */
+  StatusCheck     = '__DOWNLOAD_BOX_CHECK_POPUP__',
 }
+
+
+export type DownloadSpeeds = {
+  [key: DownloadItem['id']]: number,
+}
+
+
+export type Message =
+  | { type: MessageType.Ping, payload?: DownloadSpeeds }
+  | { type: MessageType.PopupOpened }
+  | { type: MessageType.StatusCheck }

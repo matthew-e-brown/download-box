@@ -2,7 +2,7 @@
   <svg
     xmlns="http://www.w3.org/2000/svg"
     version="1.1"
-    viewbox="0 0 420 5"
+    viewbox="0 0 440 5"
     role="progressbar"
     aria-valuemin="0"
     aria-valuemax="1"
@@ -64,9 +64,9 @@ export default defineComponent({
       // https://yqnn.github.io/svg-path-editor/
       if (percent.value == 0) return 'M 0 0 Z';
       else {
-        // SVG's viewport is 420x5 to get the right ratio, then shaped with CSS
-        // afterwards. Hence the 420 multiple.
-        const width = percent.value * 420;
+        // SVG's viewport is 440 to get the right ratio, then shaped with CSS
+        // afterwards. Hence the 440 multiple.
+        const width = percent.value * 440;
         return `m 0 0 l ${width} 0 a 1 1 0 0 1 0 5 L 0 5 z`;
       }
     });
