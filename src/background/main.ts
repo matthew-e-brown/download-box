@@ -8,6 +8,14 @@ import DownloadDelta = downloads.DownloadDelta;
 import runtime = chrome.runtime;
 
 
+/**
+ * @note
+ * Technically `setInterval` shouldn't be used in MV3 Chrome Extensions, since
+ * they run in service workers and the interval might be cancelled at any time.
+ * The alternative is... unknown, at this point in time, as far as I can tell.
+ * This isn't a very high-stakes extension, so I'll accept the consequences.
+ */
+
 class DownloadManager {
 
   private static _instance: DownloadManager | null = null;

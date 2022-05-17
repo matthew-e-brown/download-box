@@ -82,8 +82,8 @@ module.exports = (_, { mode }) => {
   };
 
   /**
-   * @note This is *essential* because Webpack's production mode makes heavy use
-   * of `eval`, which is disallowed in Chrome Extensions.
+   * @note This is *essential* because Webpack's standard development mode makes
+   * heavy use of `eval`, which is disallowed in Chrome Extensions.
    */
   if (mode == 'development')
     config.devtool = 'inline-source-map';
