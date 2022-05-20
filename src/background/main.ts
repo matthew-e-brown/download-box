@@ -104,6 +104,11 @@ class DownloadManager {
       // Also send the popup a copy of the speeds, just in case they need it
       const payload = serializeMap(this.speeds);
       runtime.sendMessage({ type: MessageType.Ping, payload });
+
+      // Tell Chrome that we handled this message
+      return true;
+    } else {
+      return false;
     }
   }
 

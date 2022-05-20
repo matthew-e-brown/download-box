@@ -179,6 +179,9 @@ export default defineComponent({
     const messageHandler = (message: Message) => {
       switch (message.type) {
 
+        // Technically we should use the `sendResponse` parameter (the 3rd one
+        // passed to each `onMessage`) or resolve with a Promise containing the
+        // payload, but... I don't feel like reworking this lol.
         case MessageType.StatusCheck:
           runtime.sendMessage({ type: MessageType.PopupOpened });
           break;
@@ -189,6 +192,9 @@ export default defineComponent({
           break;
 
       }
+
+      // Tell Chrome that we handled this message
+      return true;
     }
 
 
