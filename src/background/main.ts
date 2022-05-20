@@ -64,8 +64,17 @@ class DownloadManager {
    * @param port The port opened by the popup
    */
   private onConnect(port: runtime.Port) {
-    port.onDisconnect.addListener(() => this.port = null);
+    console.log("Popup connected to service worker.");
+
     this.port = port;
+    this.port.onDisconnect.addListener(() => {
+      console.log("Popup disconnected from service worker.");
+      this.port = null;
+    });
+
+    // Clear the unchecked downloads and re-draw the icon
+    this.unchecked = [ ];
+    this.drawIcon();
   }
 
 
