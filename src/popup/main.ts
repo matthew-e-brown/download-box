@@ -1,14 +1,14 @@
 import App from './App.vue';
-import { createApp, Ref, InjectionKey } from 'vue';
+import { createApp, InjectionKey } from 'vue';
+
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 import 'normalize.css';
 import '@fontsource/atkinson-hyperlegible/400.css';
 
-import { DownloadSpeeds } from '@/common';
 import './main.scss';
 
-import { library } from '@fortawesome/fontawesome-svg-core';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 import {
   faLeft,

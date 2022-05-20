@@ -35,7 +35,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, onUnmounted, onBeforeUpdate, provide, Ref } from 'vue';
-import { search, getItemStartTime, Message, MessageType, DownloadSpeeds } from '@/common';
+import { search, getItemStartTime, DownloadSpeeds, Ping } from '@/common';
 import { popupKey } from './main';
 
 import downloads = chrome.downloads;
@@ -122,6 +122,9 @@ export default defineComponent({
   components: { Item },
   setup() {
 
+    // Connection to the backend
+    let port: runtime.Port | null = null;
+
     const items = ref<DownloadItem[]>([ ]);
     const pagination = usePagination(items);
 
@@ -175,36 +178,24 @@ export default defineComponent({
 
 
     const downloadHandler = () => refresh();
-
-    const messageHandler = (message: Message) => {
-      switch (message.type) {
-
-        case MessageType.StatusCheck:
-          runtime.sendMessage({ type: MessageType.PopupOpened });
-          break;
-
-        case MessageType.Ping:
-          if (message.payload) itemSpeeds.value = message.payload;
-          refresh();
-          break;
-
-      }
+    const onMessage = (message: Ping) => {
+      if (message.payload) itemSpeeds.value = message.payload;
     }
 
-
     onMounted(() => {
-      refresh();
-      runtime.onMessage.addListener(messageHandler);
+      port = runtime.connect();
+      port.onMessage.addListener(onMessage);
+
       downloads.onCreated.addListener(downloadHandler);
       downloads.onChanged.addListener(downloadHandler);
 
-      // Tell the background script that the popup was opened, so it can re-draw
-      // the icon in the regular color
-      runtime.sendMessage({ type: MessageType.PopupOpened });
+      refresh();
     });
 
     onUnmounted(() => {
-      runtime.onMessage.removeListener(messageHandler);
+      port?.onMessage.removeListener(onMessage);
+      port = null;
+
       downloads.onCreated.removeListener(downloadHandler);
       downloads.onChanged.removeListener(downloadHandler);
     });

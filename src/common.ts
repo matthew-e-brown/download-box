@@ -2,6 +2,15 @@ import DownloadItem = chrome.downloads.DownloadItem;
 import DownloadQuery = chrome.downloads.DownloadQuery;
 
 
+export type DownloadSpeeds = {
+  [key: DownloadItem['id']]: number,
+}
+
+export interface Ping {
+  payload?: DownloadSpeeds;
+}
+
+
 // Size of a tick in milliseconds
 export const TICK_MS = 500;
 export const TICKS_PER_SECOND = 1000 / TICK_MS;
@@ -56,24 +65,3 @@ export function getItemStartTime(item?: DownloadItem) {
   // since it starts "before" the passed time, we add one millisecond to it
   return (new Date(new Date(item.startTime).getTime() + 1)).toISOString();
 }
-
-
-export enum MessageType {
-  /** From the backend, to tell the frontend to refresh */
-  Ping            = '__DOWNLOAD_BOX_PING__',
-  /** From the frontend, to tell the backend that the popup has been opened */
-  PopupOpened     = '__DOWNLOAD_BOX_POPUP_OPENED__',
-  /** From the backend; asks the frontend to reply if it is currently open */
-  StatusCheck     = '__DOWNLOAD_BOX_CHECK_POPUP__',
-}
-
-
-export type DownloadSpeeds = {
-  [key: DownloadItem['id']]: number,
-}
-
-
-export type Message =
-  | { type: MessageType.Ping, payload?: DownloadSpeeds }
-  | { type: MessageType.PopupOpened }
-  | { type: MessageType.StatusCheck }

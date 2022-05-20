@@ -1,4 +1,4 @@
-import { search, computePercentage, Message, MessageType, TICK_MS } from '@/common';
+import { search, computePercentage, TICK_MS, Ping } from '@/common';
 import { SpeedTracker, serializeMap } from './speed';
 import { Icon, Color } from './icon';
 
@@ -8,6 +8,14 @@ import DownloadDelta = downloads.DownloadDelta;
 import runtime = chrome.runtime;
 
 
+/**
+ * @note
+ * Technically `setInterval` shouldn't be used in MV3 Chrome Extensions, since
+ * they run in service workers and the interval might be cancelled at any time.
+ * The alternative is... unknown, at this point in time, as far as I can tell.
+ * This isn't a very high-stakes extension, so I'll accept the consequences.
+ */
+
 class DownloadManager {
 
   private static _instance: DownloadManager | null = null;
@@ -15,6 +23,7 @@ class DownloadManager {
   private speeds: Map<DownloadItem['id'], SpeedTracker>;
   private timer: ReturnType<typeof setInterval> | null;
   private icon: Icon;
+  private port: runtime.Port | null;
 
   /**
    * Holds the downloads that have finished since the user most recently opened
@@ -27,16 +36,17 @@ class DownloadManager {
     this.speeds = new Map();
     this.timer = null;
     this.icon = new Icon();
+    this.port = null;
 
     this.unchecked = [ ];
 
     downloads.setShelfEnabled(false);
 
-    downloads.onCreated.addListener(this.onCreated.bind(this));
-    downloads.onChanged.addListener(this.onChanged.bind(this));
-    downloads.onErased.addListener(this.onErased.bind(this));
+    downloads.onCreated.addListener(this.onDownloadCreated.bind(this));
+    downloads.onChanged.addListener(this.onDownloadChanged.bind(this));
+    downloads.onErased.addListener(this.onDownloadErased.bind(this));
 
-    runtime.onMessage.addListener(this.onMessage.bind(this));
+    runtime.onConnect.addListener(this.onConnect.bind(this));
 
     // Draw the icon once on startup
     this.icon.draw();
@@ -49,10 +59,21 @@ class DownloadManager {
 
 
   /**
-   * Pings the popup to refresh and starts the timer if necessary.
+   * Accepts an incoming connection from the popup so that it may be sent
+   * messages.
+   * @param port The port opened by the popup
    */
-  private onCreated() {
-    runtime.sendMessage({ type: MessageType.Ping });
+  private onConnect(port: runtime.Port) {
+    port.onDisconnect.addListener(() => this.port = null);
+    this.port = port;
+  }
+
+
+  /**
+   * Pings the popup to refresh and starts the timer if either are necessary.
+   */
+  private onDownloadCreated() {
+    this.port?.postMessage({ });
     this.start();
   }
 
@@ -62,49 +83,33 @@ class DownloadManager {
    * buffer, and redraws the icon.
    * @param delta The change from the Chrome API.
    */
-  private async onChanged(delta: DownloadDelta) {
-    runtime.sendMessage({ type: MessageType.Ping });
-
+  private async onDownloadChanged(delta: DownloadDelta) {
     // If it was the state that changed...
     if (delta.state !== undefined) {
       const state = delta.state.current;
       // ...and the state completed, push to the list
       if (state == 'interrupted' || state == 'complete') {
         const [ item ] = await search({ id: delta.id });
-        this.unchecked.push(item);
-        this.speeds.delete(item.id);
 
-        // Ask the popup to reply with a `PopupOpened` if it is open
-        runtime.sendMessage({ type: MessageType.StatusCheck });
+        // If the popup is not open, push to the unchecked list
+        if (this.port === null) {
+          this.unchecked.push(item);
+        }
+
+        this.speeds.delete(item.id);
       }
     }
 
+    // In all other cases, simply draw the icon again
     await this.drawIcon();
-  }
-
-
-  /**
-   * Redraws the icon with fresh colours.
-   * @param message Message from the popup.
-   */
-  private onMessage(message: Message) {
-    if (message.type == MessageType.PopupOpened) {
-      // If they opened the popup, clear the unchecked downloads
-      this.unchecked = [];
-      this.drawIcon();
-
-      // Also send the popup a copy of the speeds, just in case they need it
-      const payload = serializeMap(this.speeds);
-      runtime.sendMessage({ type: MessageType.Ping, payload });
-    }
   }
 
 
   /**
    * Pings the popup to refresh.
    */
-  private onErased() {
-    runtime.sendMessage({ type: MessageType.Ping });
+  private onDownloadErased() {
+    this.port?.postMessage({ });
   }
 
 
@@ -141,8 +146,8 @@ class DownloadManager {
     // Just in case a download managed to sneak through without getting deleted
     this.speeds.clear();
 
-    // Drawing the icon after downloads complete is handled by the onChanged
-    // listener.
+    // Drawing the icon after downloads complete is handled by the
+    // onDownloadChanged listener.
   }
 
 
@@ -160,14 +165,17 @@ class DownloadManager {
         const bytes = download.bytesReceived;
         const tracker = this.speeds.get(download.id);
 
-        if (tracker) tracker.pushSize(bytes);
-        else this.speeds.set(download.id, new SpeedTracker(bytes));
+        if (tracker) {
+          tracker.pushSize(bytes);
+        } else {
+          this.speeds.set(download.id, new SpeedTracker(bytes));
+        }
       }
 
       // Send to the popup
-      const payload = serializeMap(this.speeds);
-      runtime.sendMessage({ type: MessageType.Ping, payload });
-      this.drawIcon();
+      const message: Ping = { payload: serializeMap(this.speeds) };
+      this.port?.postMessage(message);
+      await this.drawIcon();
     } else {
       this.stop();
     }
