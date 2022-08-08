@@ -1,35 +1,35 @@
 <template>
-  <main @click="closeAllOverlays(-1)" @click.right="closeAllOverlays(-1)">
-    <h1>Downloads</h1>
+    <main @click="closeAllOverlays(-1)" @click.right="closeAllOverlays(-1)">
+        <h1>Downloads</h1>
 
-    <ul id="downloads-list" v-if="items.length > 0">
-      <Item
-        v-for="(item, i) in items"
-        :key="i"
-        :item="item"
-        :speeds-map="itemSpeeds"
-        :ref="(el: any) => itemRefs[i] = el"
-        @erase="eraseItem"
-        @retry="retryItem"
-        @overlay="closeAllOverlays(i)"
-      />
-    </ul>
-    <div id="empty" v-else>There's nothing here...</div>
+        <ul id="downloads-list" v-if="items.length > 0">
+            <Item
+                v-for="(item, i) in items"
+                :key="i"
+                :item="item"
+                :speeds-map="itemSpeeds"
+                :ref="(el: any) => itemRefs[i] = el"
+                @erase="eraseItem"
+                @retry="retryItem"
+                @overlay="closeAllOverlays(i)"
+            />
+        </ul>
+        <div id="empty" v-else>There's nothing here...</div>
 
-    <div id="page-buttons">
-      <button id="prev-page" type="button" @click="prevPage">
-        <fa-icon icon="left" fixed-width />
-      </button>
-      <div>Page {{ pageNumber }}</div>
-      <button id="next-page" type="button" @click="nextPage">
-        <fa-icon icon="right" fixed-width />
-      </button>
-    </div>
+        <div id="page-buttons">
+            <button id="prev-page" type="button" @click="prevPage">
+                <fa-icon icon="left" fixed-width />
+            </button>
+            <div>Page {{ pageNumber }}</div>
+            <button id="next-page" type="button" @click="nextPage">
+                <fa-icon icon="right" fixed-width />
+            </button>
+        </div>
 
-    <Transition name="popup">
-      <div v-if="showCopiedPopup" class="popup">URL copied</div>
-    </Transition>
-  </main>
+        <Transition name="popup">
+            <div v-if="showCopiedPopup" class="popup">URL copied</div>
+        </Transition>
+    </main>
 </template>
 
 
@@ -47,252 +47,247 @@ import Item from './components/Item.vue';
 
 
 const defaultSearchOptions: DownloadQuery = {
-  limit: 5,
-  filenameRegex: '.+',
-  orderBy: [ '-startTime' ],
+    limit: 5,
+    filenameRegex: '.+',
+    orderBy: [ '-startTime' ],
 };
 
 
 function usePagination(items: Ref<DownloadItem[]>) {
 
-  /**
-   * @note
-   * To change pages, we perform a new search with a `startBefore` time. To move
-   * earlier in time to the next page, we search for everything before the
-   * earliest item on this page (if there are five items, search for everything
-   * before item five).
-   *
-   * To move backwards (more recently in time; from page two to one), we need to
-   * keep track of the `startTime`s of all of our previous pages. This stack
-   * holds those times (as ISO 8601 stamps).
-   */
+    /*
+     * To change pages, we perform a new search with a `startBefore` time. To move earlier in time
+     * to the next page, we search for everything before the earliest item on this page (if there
+     * are five items, search for everything before item five).
+     *
+     * To move backwards (more recently in time; from page two to one), we need to keep track of the
+     * `startTime`s of all of our previous pages. This stack holds those times (as ISO 8601 stamps).
+     */
 
-  const stack = ref<string[]>([ ]);
-  const pageNumber = computed(() => stack.value.length + 1);
+    const stack = ref<string[]>([ ]);
+    const pageNumber = computed(() => stack.value.length + 1);
 
 
-  const prevPage = async () => {
-    const startedBefore = stack.value.pop();
+    const prevPage = async () => {
+        const startedBefore = stack.value.pop();
 
-    // Don't paginate if this is the first page
-    if (startedBefore === undefined) return;
+        // Don't paginate if this is the first page
+        if (startedBefore === undefined) return;
 
-    items.value = await search({ ...defaultSearchOptions, startedBefore });
-  };
-
-
-  const nextPage = async () => {
-    const startedBefore = items.value[items.value.length - 1].startTime;
-    const newItems = await search({ ...defaultSearchOptions, startedBefore });
-
-    // Don't paginate if there are no earlier items
-    if (newItems.length) {
-      stack.value.push(getItemStartTime(items.value[0]));
-      items.value = newItems;
-    }
-  };
+        items.value = await search({ ...defaultSearchOptions, startedBefore });
+    };
 
 
-  return {
-    pageNumber,
-    prevPage,
-    nextPage,
-  };
+    const nextPage = async () => {
+        const startedBefore = items.value[items.value.length - 1].startTime;
+        const newItems = await search({ ...defaultSearchOptions, startedBefore });
+
+        // Don't paginate if there are no earlier items
+        if (newItems.length) {
+            stack.value.push(getItemStartTime(items.value[0]));
+            items.value = newItems;
+        }
+    };
+
+
+    return {
+        pageNumber,
+        prevPage,
+        nextPage,
+    };
 }
 
 
 function usePopup(timeout: number) {
-  const visible = ref(false);
+    const visible = ref(false);
 
-  const hide = () => {
-    visible.value = false;
-  }
+    const hide = () => {
+        visible.value = false;
+    }
 
-  const show = () => {
-    visible.value = true;
-    setTimeout(hide, timeout);
-  }
+    const show = () => {
+        visible.value = true;
+        setTimeout(hide, timeout);
+    }
 
-  return { visible, show, hide };
+    return { visible, show, hide };
 }
 
 
 export default defineComponent({
-  name: 'App',
-  components: { Item },
-  setup() {
+    name: 'App',
+    components: { Item },
+    setup() {
 
-    // Connection to the backend
-    let port: runtime.Port | null = null;
+        // Connection to the backend
+        let port: runtime.Port | null = null;
 
-    const items = ref<DownloadItem[]>([ ]);
-    const pagination = usePagination(items);
+        const items = ref<DownloadItem[]>([ ]);
+        const pagination = usePagination(items);
 
-    const itemRefs = ref<InstanceType<typeof Item>[]>([ ]);
-    const itemSpeeds = ref<DownloadSpeeds>({ });
+        const itemRefs = ref<InstanceType<typeof Item>[]>([ ]);
+        const itemSpeeds = ref<DownloadSpeeds>({ });
 
-    const copiedPopup = usePopup(3650);
-    provide(popupKey, copiedPopup.show);
+        const copiedPopup = usePopup(3650);
+        provide(popupKey, copiedPopup.show);
 
 
-    const closeAllOverlays = (exceptIndex: number) => {
-      itemRefs.value.forEach((item, i) => {
-        if (i != exceptIndex) item?.closeOverlay();
-      });
+        const closeAllOverlays = (exceptIndex: number) => {
+            itemRefs.value.forEach((item, i) => {
+                if (i != exceptIndex) item?.closeOverlay();
+            });
+        }
+
+
+        const refresh = async () => {
+            items.value = await search({
+                ...defaultSearchOptions,
+                startedBefore: getItemStartTime(items.value[0])
+            });
+        }
+
+
+        const retryItem = (url: string) => downloads.download({ url });
+
+        const eraseItem = async (toRemove: number) => {
+            // Remove the item
+            await new Promise(resolve => {
+                downloads.erase({ id: toRemove }, resolve);
+            });
+
+            /*
+             * We handle the `refresh()` call differently in this case because of the possibility
+             * that they cleared the first item on the page. Just calling `refresh` without taking
+             * care to check which one they deleted might cause some weirdness, since the time of
+             * the first item on the page is use in the `pageStack`.
+             *
+             * This is the same reason we don't have a downloads.onErased listener.
+             */
+
+            const deleted = items.value.findIndex(({ id }) => id == toRemove);
+            const startedBefore = getItemStartTime(items.value[deleted == 0 ? 1 : 0]);
+
+            items.value = await search({ ...defaultSearchOptions, startedBefore });
+            closeAllOverlays(-1);
+        }
+
+
+        const downloadHandler = () => refresh();
+        const onMessage = (message: Ping) => {
+            if (message.payload) itemSpeeds.value = message.payload;
+        }
+
+        onMounted(() => {
+            port = runtime.connect();
+            port.onMessage.addListener(onMessage);
+
+            downloads.onCreated.addListener(downloadHandler);
+            downloads.onChanged.addListener(downloadHandler);
+
+            refresh();
+        });
+
+        onUnmounted(() => {
+            port?.onMessage.removeListener(onMessage);
+            port = null;
+
+            downloads.onCreated.removeListener(downloadHandler);
+            downloads.onChanged.removeListener(downloadHandler);
+        });
+
+        onBeforeUpdate(() => {
+            // Clear the itemRefs because they are re-added each render
+            itemRefs.value = [];
+        });
+
+        return {
+            items,
+            itemRefs,
+            itemSpeeds,
+            eraseItem,
+            retryItem,
+            closeAllOverlays,
+            ...pagination,
+            showCopiedPopup: copiedPopup.visible,
+        };
     }
-
-
-    const refresh = async () => {
-      items.value = await search({
-        ...defaultSearchOptions,
-        startedBefore: getItemStartTime(items.value[0])
-      });
-    }
-
-
-    const retryItem = (url: string) => downloads.download({ url });
-
-    const eraseItem = async (toRemove: number) => {
-      // Remove the item
-      await new Promise(resolve => {
-        downloads.erase({ id: toRemove }, resolve);
-      });
-
-      /**
-       * @note
-       * We handle the `refresh()` call differently in this case because of the
-       * possibility that they cleared the first item on the page. Just calling
-       * `refresh` without taking care to check which one they deleted might
-       * cause some weirdness, since the time of the first item on the page is
-       * use in the `pageStack`.
-       *
-       * This is the same reason we don't have a downloads.onErased listener.
-       */
-
-      const deleted = items.value.findIndex(({ id }) => id == toRemove);
-      const startedBefore = getItemStartTime(items.value[deleted == 0 ? 1 : 0]);
-
-      items.value = await search({ ...defaultSearchOptions, startedBefore });
-      closeAllOverlays(-1);
-    }
-
-
-    const downloadHandler = () => refresh();
-    const onMessage = (message: Ping) => {
-      if (message.payload) itemSpeeds.value = message.payload;
-    }
-
-    onMounted(() => {
-      port = runtime.connect();
-      port.onMessage.addListener(onMessage);
-
-      downloads.onCreated.addListener(downloadHandler);
-      downloads.onChanged.addListener(downloadHandler);
-
-      refresh();
-    });
-
-    onUnmounted(() => {
-      port?.onMessage.removeListener(onMessage);
-      port = null;
-
-      downloads.onCreated.removeListener(downloadHandler);
-      downloads.onChanged.removeListener(downloadHandler);
-    });
-
-    onBeforeUpdate(() => {
-      // Clear the itemRefs because they are re-added each render
-      itemRefs.value = [];
-    });
-
-    return {
-      items,
-      itemRefs,
-      itemSpeeds,
-      eraseItem,
-      retryItem,
-      closeAllOverlays,
-      ...pagination,
-      showCopiedPopup: copiedPopup.visible,
-    };
-  }
 });
 </script>
 
 
 <style lang="scss" scoped>
 main {
-  padding-top: 1rem;
-  position: relative;
+    padding-top: 1rem;
+    position: relative;
 }
 
 h1 {
-  font-size: 24px;
-  font-weight: normal;
-  text-align: center;
+    font-size: 24px;
+    font-weight: normal;
+    text-align: center;
 
-  margin-top: 0;
-  margin-bottom: 1rem;
+    margin-top: 0;
+    margin-bottom: 1rem;
 }
 
 ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0;
 }
 
 #page-buttons {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  column-gap: 4px;
-  padding: 4px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 4px;
+    padding: 4px;
 
-  div {
-    text-align: center;
-    place-self: center;
+    div {
+        text-align: center;
+        place-self: center;
 
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
 
-    max-width: 100%;
-    padding: 0 8px;
-  }
+        max-width: 100%;
+        padding: 0 8px;
+    }
 
-  button {
-    color: inherit;
-    background-color: var(--button-pages-bg);
+    button {
+        color: inherit;
+        background-color: var(--button-pages-bg);
 
-    border: 2px solid transparent;
-    &:hover { border-color: var(--button-pages-border); }
+        border: 2px solid transparent;
+        &:hover { border-color: var(--button-pages-border); }
 
-    margin: 0;
-    padding: 0;
-    border-radius: 4px;
+        margin: 0;
+        padding: 0;
+        border-radius: 4px;
 
-    height: 38px;
-    cursor: pointer;
-  }
+        height: 38px;
+        cursor: pointer;
+    }
 }
 
 .popup {
-  position: absolute;
-  top: 12px;
-  left: 12px;
+    position: absolute;
+    top: 12px;
+    left: 12px;
 
-  font-style: italic;
-  font-size: 13px;
+    font-style: italic;
+    font-size: 13px;
 
-  padding: 4px 10px 4px 6px;
-  border-radius: 4px;
-  text-align: center;
+    padding: 4px 10px 4px 6px;
+    border-radius: 4px;
+    text-align: center;
 
-  background-color: hsla(0, 0%, 0%, 0.75);
+    background-color: hsla(0, 0%, 0%, 0.75);
 }
 
 
 .popup-enter-active, .popup-leave-active {
-  transition: transform 325ms cubic-bezier(0.70, -0.25, 0.45, 1.25);
+    transition: transform 325ms cubic-bezier(0.70, -0.25, 0.45, 1.25);
 }
 
 .popup-enter-from, .popup-leave-to { transform: translateX(-120%); }

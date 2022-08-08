@@ -1,37 +1,37 @@
 {
-  "$schema": "https://json.schemastore.org/chrome-manifest",
+    "$schema": "https://json.schemastore.org/chrome-manifest",
 
-  "name": "Download Box",
-  "description": "<copied from package.json>",
-  "version": "0.0.0",
+    "name": "Download Box",
+    "description": "<copied from package.json>",
+    "version": "0.0.0",
 
-  "manifest_version": 3,
-  "minimum_chrome_version": "88",
+    "manifest_version": 3,
+    "minimum_chrome_version": "88",
 
-  "icons": {
-    "16": "icons/16x16.png",
-    "48": "icons/48x48.png",
-    "128": "icons/128x128.png",
-    "256": "icons/256x256.png"
-  },
+    "icons": {
+        "16": "icons/16x16.png",
+        "48": "icons/48x48.png",
+        "128": "icons/128x128.png",
+        "256": "icons/256x256.png"
+    },
 
-  "action": {
-    "default_popup": "popup.html",
-    "default_title": "Downloads",
-    "default_icon": {
-      "16": "icons/16x16.png",
-      "24": "icons/24x24.png",
-      "32": "icons/32x32.png"
-    }
-  },
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "Downloads",
+        "default_icon": {
+            "16": "icons/16x16.png",
+            "24": "icons/24x24.png",
+            "32": "icons/32x32.png"
+        }
+    },
 
-  "background": {
-    "service_worker": "background.js"
-  },
+    "background": {
+        "service_worker": "background.js"
+    },
 
-  "permissions": [
-    "downloads",
-    "downloads.open",
-    "downloads.shelf"
-  ]
+    "permissions": [
+        "downloads",
+        "downloads.open",
+        "downloads.shelf"
+    ]
 }

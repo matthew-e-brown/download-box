@@ -1,128 +1,128 @@
 * {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 body {
-  margin: 0;
-  padding: 0;
-  width: 440px;
-  user-select: none;
+    margin: 0;
+    padding: 0;
+    width: 440px;
+    user-select: none;
 
-  font-family: 'Atkinson Hyperlegible', sans-serif;
-  font-weight: 400;
-  font-size: 16px;
+    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-weight: 400;
+    font-size: 16px;
 
-  color: var(--main-fg);
-  background-color: var(--main-bg);
+    color: var(--main-fg);
+    background-color: var(--main-bg);
 
-  // Palette:
+    // Palette:
 
-  $blue-20: hsl(201, 64%, 22%);
-  $blue-30: hsl(201, 100%, 33%);
-  $blue-40: hsl(201, 100%, 42%);
-  $blue-50: hsl(201, 100%, 50%);
+    $blue-20: hsl(201, 64%, 22%);
+    $blue-30: hsl(201, 100%, 33%);
+    $blue-40: hsl(201, 100%, 42%);
+    $blue-50: hsl(201, 100%, 50%);
 
-  $red-20: hsl(0, 75%, 22%);
-  $red-50: hsl(0, 75%, 50%);
+    $red-20: hsl(0, 75%, 22%);
+    $red-50: hsl(0, 75%, 50%);
 
-  $yellow-20: hsl(60, 64%, 22%);
-  $yellow-40: hsl(60, 77%, 41%);
-  $yellow-50: hsl(60, 100%, 50%);
+    $yellow-20: hsl(60, 64%, 22%);
+    $yellow-40: hsl(60, 77%, 41%);
+    $yellow-50: hsl(60, 100%, 50%);
 
-  // Light theme:
+    // Light theme:
 
-  --main-bg: hsl(0, 0%, 98%);
-  --main-fg: hsl(0, 0%, 13%);
+    --main-bg: hsl(0, 0%, 98%);
+    --main-fg: hsl(0, 0%, 13%);
 
-  --item-bg1: hsl(0, 0%, 94%);
-  --item-bg2: hsl(0, 0%, 90%);
-  --item-border: #{$blue-40};
-  --item-border-error: hsla(0, 100%, 50%, 0.65);
+    --item-bg1: hsl(0, 0%, 94%);
+    --item-bg2: hsl(0, 0%, 90%);
+    --item-border: #{$blue-40};
+    --item-border-error: hsla(0, 100%, 50%, 0.65);
 
-  --progress-bar-normal1: #{$blue-30};
-  --progress-bar-normal2: #{$blue-50};
-
-  --progress-bar-paused1: #{$yellow-40};
-  --progress-bar-paused2: #{$yellow-50};
-
-  --progress-bar-error1: #{$red-20};
-  --progress-bar-error2: #{$red-50};
-
-  --button-items-bg: hsl(0, 0%, 85%);
-  --button-pages-bg: hsl(0, 0%, 80%);
-  --button-items-border: #{$blue-50};
-  --button-pages-border: #{$blue-40};
-
-  --overlay-bg: var(--main-bg);
-
-  // Dark theme:
-
-  @media (prefers-color-scheme: dark) {
-    --main-bg: hsl(0, 0%, 13%);
-    --main-fg: hsl(0, 0%, 98%);
-
-    --item-bg1: hsl(0, 0%, 9%);
-    --item-bg2: hsl(0, 0%, 16%);
-    --item-border: #{$blue-20};
-    --item-border-error: hsla(0, 75%, 22%, 0.65);
-
-    --progress-bar-normal1: #{$blue-20};
+    --progress-bar-normal1: #{$blue-30};
     --progress-bar-normal2: #{$blue-50};
 
-    --progress-bar-paused1: #{$yellow-20};
+    --progress-bar-paused1: #{$yellow-40};
     --progress-bar-paused2: #{$yellow-50};
 
     --progress-bar-error1: #{$red-20};
     --progress-bar-error2: #{$red-50};
 
-    --button-items-bg: hsl(0, 0%, 25%);
-    --button-pages-bg: hsl(0, 0%, 19%);
+    --button-items-bg: hsl(0, 0%, 85%);
+    --button-pages-bg: hsl(0, 0%, 80%);
     --button-items-border: #{$blue-50};
-    --button-pages-border: #{$blue-20};
+    --button-pages-border: #{$blue-40};
 
-    --overlay-bg: black;
-  }
+    --overlay-bg: var(--main-bg);
 
-  // Don't change with theme:
+    // Dark theme:
 
-  --button-warning-fg: white;
-  --button-warning-bg: #{$red-50};
-  --button-warning-border: #{$red-20};
+    @media (prefers-color-scheme: dark) {
+        --main-bg: hsl(0, 0%, 13%);
+        --main-fg: hsl(0, 0%, 98%);
+
+        --item-bg1: hsl(0, 0%, 9%);
+        --item-bg2: hsl(0, 0%, 16%);
+        --item-border: #{$blue-20};
+        --item-border-error: hsla(0, 75%, 22%, 0.65);
+
+        --progress-bar-normal1: #{$blue-20};
+        --progress-bar-normal2: #{$blue-50};
+
+        --progress-bar-paused1: #{$yellow-20};
+        --progress-bar-paused2: #{$yellow-50};
+
+        --progress-bar-error1: #{$red-20};
+        --progress-bar-error2: #{$red-50};
+
+        --button-items-bg: hsl(0, 0%, 25%);
+        --button-pages-bg: hsl(0, 0%, 19%);
+        --button-items-border: #{$blue-50};
+        --button-pages-border: #{$blue-20};
+
+        --overlay-bg: black;
+    }
+
+    // Don't change with theme:
+
+    --button-warning-fg: white;
+    --button-warning-bg: #{$red-50};
+    --button-warning-border: #{$red-20};
 
 }
 
 
 button.icon-button {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
 
-  border: 2px solid transparent;
-  &:hover { border-color: var(--border-color); }
+    border: 2px solid transparent;
+    &:hover { border-color: var(--border-color); }
 
-  padding: 2px;
+    padding: 2px;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-  color: inherit;
-  background-color: var(--button-color);
+    color: inherit;
+    background-color: var(--button-color);
 
-  cursor: pointer;
+    cursor: pointer;
 }
 
 
 .button-row {
 
-  display: flex;
-  flex-flow: row nowrap;
-  justify-content: flex-end;
-  column-gap: 14px;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: flex-end;
+    column-gap: 14px;
 
-  button {
-    margin: 0;
-    --button-color: var(--button-items-bg);
-    --border-color: var(--button-items-border);
-  }
+    button {
+        margin: 0;
+        --button-color: var(--button-items-bg);
+        --border-color: var(--button-items-border);
+    }
 }

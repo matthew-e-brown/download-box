@@ -11,25 +11,25 @@ import './main.scss';
 
 
 import {
-  faLeft,
-  faRight,
-  faFolderBlank,
-  faArrowRotateLeft,
-  faPlay,
-  faPause,
-  faXmark,
-  faLink,
+    faLeft,
+    faRight,
+    faFolderBlank,
+    faArrowRotateLeft,
+    faPlay,
+    faPause,
+    faXmark,
+    faLink,
 } from '@fortawesome/pro-solid-svg-icons';
 
 library.add(
-  faLeft,
-  faRight,
-  faFolderBlank,
-  faArrowRotateLeft,
-  faPlay,
-  faPause,
-  faXmark,
-  faLink,
+    faLeft,
+    faRight,
+    faFolderBlank,
+    faArrowRotateLeft,
+    faPlay,
+    faPause,
+    faXmark,
+    faLink,
 );
 
 
@@ -37,5 +37,5 @@ export const popupKey = Symbol('Popup') as InjectionKey<() => void>;
 
 
 export default createApp(App)
-  .component('fa-icon', FontAwesomeIcon)
-  .mount('#app');
+    .component('fa-icon', FontAwesomeIcon)
+    .mount('#app');
