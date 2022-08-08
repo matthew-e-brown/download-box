@@ -1,27 +1,28 @@
 {
-  "compilerOptions": {
-    "target": "esnext",
-    "module": "esnext",
-    "moduleResolution": "node",
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "sourceMap": true,
-    "strict": true,
-    "allowJs": true,
-    "checkJs": true,
-    "baseUrl": "./",
-    "paths": {
-      "@/*": [ "./src/*" ]
-    }
-  },
-  "include": [
-    "src/**/*.d.ts",
-    "src/**/*.ts",
-    "src/**/*.js",
-    "src/**/*.vue"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+    "compilerOptions": {
+        "target": "esnext",
+        "module": "esnext",
+        "moduleResolution": "node",
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "sourceMap": true,
+        "strict": true,
+        "allowJs": true,
+        "checkJs": true,
+        "baseUrl": "./",
+        "paths": {
+            "@/*": [ "./src/*" ]
+        },
+        "jsx": "preserve"
+    },
+    "include": [
+        "src/**/*.d.ts",
+        "src/**/*.ts",
+        "src/**/*.js",
+        "src/**/*.vue"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
 }
