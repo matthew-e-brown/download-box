@@ -7,15 +7,22 @@
         class="download-item"
         :class="itemClasses"
     >
-        <img :src="icon" class="icon" width="32" height="32" aria-hidden="true" alt="" />
+        <img
+            :src="icon"
+            class="icon"
+            width="32"
+            height="32"
+            aria-hidden="true"
+            alt=""
+        />
 
         <div class="info">
             <div class="name">{{ filename }}</div>
             <div class="size">
                 <div class="file-size">{{ filesize }}</div>
-                <template v-if="showBar || showResume">
-                    <div class="dot">&CenterDot;</div>
-                    <div class="down-speed">{{ showResume ? 'Stopped' : downSpeed }}</div>
+                <template v-if="shouldShowBar || shouldShowResume">
+                    <div class="dot">&middot;</div>
+                    <div class="down-speed">{{ shouldShowResume ? 'Stopped' : downSpeed }}</div>
                 </template>
             </div>
         </div>
@@ -25,36 +32,36 @@
             <button
                 type="button"
                 class="icon-button"
-                v-if="showResume"
+                v-if="shouldShowResume"
                 @click.stop="resumeDownload"
-            ><fa-icon icon="play" fixed-width /></button>
+            ><FaIcon icon="play" fixed-width /></button>
             <button
                 type="button"
                 class="icon-button"
-                v-else-if="showPause"
+                v-else-if="shouldShowPause"
                 @click.stop="pauseDownload"
-            ><fa-icon icon="pause" fixed-width /></button>
+            ><FaIcon icon="pause" fixed-width /></button>
 
             <!-- If the item has been deleted or interrupted, offer to retry -->
             <button
                 type="button"
                 class="icon-button"
-                v-if="showRetry"
+                v-if="shouldShowRetry"
                 @click.stop="retryDownload"
-            ><fa-icon icon="arrow-rotate-left" fixed-width /></button>
+            ><FaIcon icon="arrow-rotate-left" fixed-width /></button>
 
             <!-- If the item exists, offer to show its location on disk -->
             <button
                 type="button"
                 class="icon-button"
-                v-if="showFolder"
+                v-if="shouldShowFolder"
                 @click.stop="showFile"
-            ><fa-icon icon="folder-blank" fixed-width /></button>
+            ><FaIcon icon="folder-blank" fixed-width /></button>
         </div>
 
         <ProgressBar
-            v-if="showBar"
-            :percent="percent"
+            v-if="shouldShowBar"
+            :percentage="percentage"
             :gradient-start="barColor.start"
             :gradient-end="barColor.end"
         />
@@ -81,193 +88,143 @@
 </template>
 
 
-<script lang="ts">
-import { defineComponent, ref, computed, watch, toRefs, inject, Ref, PropType } from 'vue';
+<script setup lang="ts">
+import { ref, computed, watch, inject, toRefs } from 'vue';
 import { formatSize, computePercentage, DownloadSpeeds } from '@/common';
-import { popupKey } from '../main';
+import { showCopiedKey } from '../main';
+
+import ProgressBar from './ProgressBar.vue';
+import ItemOverlay from './ItemOverlay.vue';
+import { FontAwesomeIcon as FaIcon } from '@fortawesome/vue-fontawesome';
 
 import downloads = chrome.downloads;
 import DownloadItem = downloads.DownloadItem;
 
-import ProgressBar from './Bar.vue';
-import ItemOverlay from './ItemOverlay.vue';
+
+// =================================================================================================
 
 
-function useConditions(item: Ref<DownloadItem>) {
+const { item, speedsMap } = toRefs(defineProps<{
+    item: DownloadItem,
+    speedsMap?: DownloadSpeeds,
+}>());
 
-    const showResume = computed(() => item.value.canResume);
-    const showPause = computed(() => item.value.state == 'in_progress');
+const emit = defineEmits<{
+    (e: 'erase', id: number): void,
+    (e: 'retry', url: string): void,
+    (e: 'overlay'): void,
+}>();
 
-    const showRetry = computed(() => item.value.state == 'interrupted' || !item.value.exists);
+const showCopied = inject(showCopiedKey);
 
-    const showFolder = computed(() => item.value.exists);
 
-    const showBar = computed(() => item.value.state == 'in_progress' || item.value.canResume);
+const showFile = () => downloads.show(item.value.id);
+const openFile = () => {
+    if (item.value.state == 'complete') downloads.open(item.value.id);
+}
 
-    return {
-        showResume,
-        showPause,
-        showRetry,
-        showFolder,
-        showBar,
+const pauseDownload = () => downloads.pause(item.value.id);
+const resumeDownload = () => downloads.resume(item.value.id);
+
+const retryDownload = () => emit('retry', item.value.url);
+const eraseFromList = () => emit('erase', item.value.id);
+const copyLink = async () => {
+    await navigator.clipboard.writeText(item.value.finalUrl);
+    showCopied?.(); // trigger provided function
+}
+
+
+const isOverlayOpen = ref(false);
+const closeOverlay = () => isOverlayOpen.value = false;
+const openOverlay = () => {
+    isOverlayOpen.value = true;
+    emit('overlay');
+}
+
+
+const barColor = computed<{ start: string, end: string }>(() => {
+    let cssVarName;
+
+    if (item.value.paused) {
+        cssVarName = 'paused';
+    } else if (item.value.state == 'interrupted') {
+        cssVarName = 'error';
+    } else {
+        cssVarName = 'normal';
     }
-}
-
-
-function useFileInfo(item: Ref<DownloadItem>, speeds: Ref<DownloadSpeeds | undefined>) {
-
-    const { showBar: inProgress } = useConditions(item);
-
-    const filename = computed(() => {
-        // Determine basename of file
-        const path = item.value.filename;
-
-        // Check if using '\' or '/' for Windows vs. *NIX
-        const separator = path.indexOf('/') == -1 ? '\\' : '/';
-        const filename = path.substring(path.lastIndexOf(separator) + 1);
-
-        return filename.replace(/\.crdownload$/, '');
-    });
-
-
-    const percent = computed(() => {
-        if (inProgress.value) {
-            const { num, den } = computePercentage(item.value);
-            return (den == 0) ? 0 : num / den;
-        } else {
-            return 1;
-        }
-    });
-
-
-    const filesize = computed(() => {
-        if (inProgress.value) {
-            const { num, den } = computePercentage(item.value);
-            return `${formatSize(num)} / ${formatSize(den)}`;
-        } else {
-            return formatSize(item.value.fileSize);
-        }
-    });
-
-
-    const downSpeed = computed(() => {
-        if (inProgress.value && speeds.value) {
-            const speed = speeds.value[item.value.id];
-            return `${formatSize(speed ?? -1)}/s`;
-        } else {
-            return `${formatSize(0)}/s`;
-        }
-    });
-
-
-    // Defaults to a blank, 1x1, transparent `.gif` file (placeholder)
-    const icon = ref('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
-
-    // Use a `watch` instead of a regular computed because `getFileIcon` is asynchronous
-    watch(() => item.value.id, async () => {
-        const src = await new Promise<string>(resolve => {
-            downloads.getFileIcon(item.value.id, { size: 32 }, resolve)
-        });
-
-        if (src) icon.value = src;
-    }, { immediate: true });
-
 
     return {
-        filename,
-        filesize,
-        downSpeed,
-        percent,
-        icon,
+        start: `var(--progress-bar-${cssVarName}1)`,
+        end: `var(--progress-bar-${cssVarName}2)`,
     };
-}
+});
+
+const itemClasses = computed(() => ({
+    'error': item.value.state == 'interrupted' || !item.value.exists,
+    'overlay-open': isOverlayOpen.value,
+}));
 
 
-export default defineComponent({
-    name: 'Item',
-    components: { ProgressBar, ItemOverlay },
-    props: {
-        item: {
-            type: Object as PropType<DownloadItem>,
-            required: true,
-        },
-        speedsMap: {
-            type: Object as PropType<DownloadSpeeds>,
-            required: false,
-        }
-    },
-    emits: {
-        erase: (id: number) => typeof id == 'number',
-        retry: (url: string) => typeof url == 'string',
-        overlay: null,
-    },
-    setup(props, { emit }) {
-        const { item, speedsMap } = toRefs(props);
-        const showCopied = inject(popupKey);
-
-        const showFile = () => downloads.show(item.value.id);
-        const openFile = () => {
-            if (item.value.state == 'complete') downloads.open(item.value.id);
-        }
-
-        const pauseDownload = () => downloads.pause(item.value.id);
-        const resumeDownload = () => downloads.resume(item.value.id);
-
-        const retryDownload = () => emit('retry', item.value.url);
-        const eraseFromList = () => emit('erase', item.value.id);
-        const copyLink = async () => {
-            await navigator.clipboard.writeText(item.value.finalUrl);
-            showCopied?.();
-        }
-
-        const isOverlayOpen = ref(false);
-        const closeOverlay = () => isOverlayOpen.value = false;
-        const openOverlay = () => {
-            isOverlayOpen.value = true;
-            emit('overlay');
-        }
-
-        const barColor = computed<{ start: string, end: string }>(() => {
-            let cssVarName;
-
-            if (item.value.paused) {
-                cssVarName = 'paused';
-            } else if (item.value.state == 'interrupted') {
-                cssVarName = 'error';
-            } else {
-                cssVarName = 'normal';
-            }
-
-            return {
-                start: `var(--progress-bar-${cssVarName}1)`,
-                end: `var(--progress-bar-${cssVarName}2)`,
-            };
-        });
-
-        const itemClasses = computed(() => ({
-            'error': item.value.state == 'interrupted' || !item.value.exists,
-            'overlay-open': isOverlayOpen.value,
-        }));
+const shouldShowResume  = computed(() => item.value.canResume);
+const shouldShowPause   = computed(() => item.value.state == 'in_progress');
+const shouldShowRetry   = computed(() => !item.value.exists || item.value.state == 'interrupted');
+const shouldShowFolder  = computed(() => item.value.exists);
+const shouldShowBar     = computed(() => item.value.state == 'in_progress' || item.value.canResume);
 
 
-        return {
-            ...useConditions(item),
-            ...useFileInfo(item, speedsMap),
-            openFile,
-            showFile,
-            pauseDownload,
-            resumeDownload,
-            retryDownload,
-            eraseFromList,
-            copyLink,
-            isOverlayOpen,
-            closeOverlay,
-            openOverlay,
-            barColor,
-            itemClasses,
-        };
+const filename = computed(() => {
+    // Full path
+    const path = item.value.filename;
 
-    },
+    const separator = path.indexOf('/') == -1 ? '\\' : '/';
+    const filename = path.substring(path.lastIndexOf(separator) + 1);
+
+    return filename.replace(/\.crdownload$/, '');
+});
+
+const percentage = computed(() => {
+    if (shouldShowBar.value) {
+        const { num, den } = computePercentage(item.value);
+        return (den == 0) ? 0 : num / den;
+    } else {
+        return 1;
+    }
+});
+
+const filesize = computed(() => {
+    if (shouldShowBar.value) {
+        const { num, den } = computePercentage(item.value);
+        return `${formatSize(num)} / ${formatSize(den)}`;
+    } else {
+        return formatSize(item.value.fileSize);
+    }
+});
+
+const downSpeed = computed(() => {
+    if (shouldShowBar.value && speedsMap?.value) {
+        const speed = speedsMap.value[item.value.id];
+        return `${formatSize(speed ?? -1)}/s`;
+    } else {
+        return `${formatSize(0)}/s`;
+    }
+});
+
+// Defaults to a blank, 1x1, transparent `.gif` file (placeholder)
+const icon = ref('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+
+// Use a `watch` instead of a regular `computed` because `getFileIcon` is asynchronous
+watch(() => item.value.id, async () => {
+    const src = await new Promise<string>(resolve => {
+        downloads.getFileIcon(item.value.id, { size: 32 }, resolve);
+    });
+
+    if (src) icon.value = src;
+}, { immediate: true });
+
+
+defineExpose({
+    itemId: computed(() => item.value.id),
+    closeOverlay,
 });
 </script>
 
