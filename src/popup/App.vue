@@ -157,9 +157,10 @@ const eraseItem = async (toRemove: number) => {
 }
 
 
-const onDownloadHandler = () => void refresh();
+const onDownloadHandler = () => refresh();
 const onMessageHandler = (message: Ping) => {
     if (message.payload) itemSpeeds.value = message.payload;
+    refresh();
 }
 
 
