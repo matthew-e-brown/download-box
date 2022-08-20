@@ -22,39 +22,34 @@
                 <div class="file-size">{{ filesize }}</div>
                 <template v-if="shouldShowBar || shouldShowResume">
                     <div class="dot">&middot;</div>
-                    <div class="down-speed">{{ shouldShowResume ? 'Stopped' : downSpeed }}</div>
+                    <div class="down-speed">{{ shouldShowResume ? 'Paused' : downSpeed }}</div>
+                    <template v-if="timeRemaining">
+                        <div class="dot">&middot;</div>
+                        <div class="remaining" v-html="timeRemaining"></div>
+                    </template>
                 </template>
             </div>
         </div>
 
         <div class="button-row">
-            <!-- If the item can be resumed or paused, offer to toggle -->
+            <!-- Extra resume button -->
             <button
                 type="button"
                 class="icon-button"
                 v-if="shouldShowResume"
                 @click.stop="resumeDownload"
             ><FaIcon icon="play" fixed-width /></button>
-            <button
-                type="button"
-                class="icon-button"
-                v-else-if="shouldShowPause"
-                @click.stop="pauseDownload"
-            ><FaIcon icon="pause" fixed-width /></button>
 
-            <!-- If the item has been deleted or interrupted, offer to retry -->
             <button
                 type="button"
                 class="icon-button"
                 v-if="shouldShowRetry"
                 @click.stop="retryDownload"
             ><FaIcon icon="arrow-rotate-left" fixed-width /></button>
-
-            <!-- If the item exists, offer to show its location on disk -->
             <button
                 type="button"
                 class="icon-button"
-                v-if="shouldShowFolder"
+                v-else-if="shouldShowFolder"
                 @click.stop="showFile"
             ><FaIcon icon="folder-blank" fixed-width /></button>
         </div>
@@ -71,11 +66,28 @@
                 v-if="isOverlayOpen"
                 @click.stop="closeOverlay"
             >
+                <!-- URL copy button -->
                 <button
                     type="button"
-                    class="icon-button link-button"
+                    class="icon-button"
                     @click="copyLink"
                 ><fa-icon icon="link" fixed-width /></button>
+
+                <!-- pause/resume button -->
+                <button
+                    type="button"
+                    class="icon-button"
+                    v-if="shouldShowResume"
+                    @click.stop="resumeDownload"
+                ><FaIcon icon="play" fixed-width /></button>
+                <button
+                    type="button"
+                    class="icon-button"
+                    v-else-if="shouldShowPause"
+                    @click.stop="pauseDownload"
+                ><FaIcon icon="pause" fixed-width /></button>
+
+                <!-- Erase button -->
                 <button
                     type="button"
                     class="icon-button erase-button"
@@ -171,7 +183,7 @@ const itemClasses = computed(() => ({
 
 
 const shouldShowResume  = computed(() => item.value.canResume);
-const shouldShowPause   = computed(() => item.value.state == 'in_progress');
+const shouldShowPause   = computed(() => !shouldShowResume.value && item.value.state == 'in_progress');
 const shouldShowRetry   = computed(() => !item.value.exists || item.value.state == 'interrupted');
 const shouldShowFolder  = computed(() => item.value.exists);
 const shouldShowBar     = computed(() => item.value.state == 'in_progress' || item.value.canResume);
@@ -211,6 +223,40 @@ const downSpeed = computed(() => {
         return `${formatSize(speed ?? -1)}/s`;
     } else {
         return `${formatSize(0)}/s`;
+    }
+});
+
+const timeRemaining = computed(() => {
+    if (shouldShowBar.value && speedsMap?.value && !shouldShowResume.value) {
+        // Check how much we've downloaded and how much per second we're downloading
+        const speed = speedsMap.value[item.value.id];
+        const { num, den } = computePercentage(item.value);
+
+        if (num >= den) return;
+        if (speed == -1) return;
+        if (speed == 0) return '&infin; seconds left';
+
+        // Simply divide the amount they have left by the speed we're going for a rough guess
+        const guessSeconds = (den - num) / speed;
+
+        // Format time
+        let n, u;
+        if (guessSeconds >= 3600 * 99) {
+            n = '&gt;99';
+            u = 'hour';
+        } else if (guessSeconds >= 3600) {
+            n = Math.round(guessSeconds / 3600);
+            u = 'hour';
+        } else if (guessSeconds >= 60) {
+            n = Math.round(guessSeconds / 60);
+            u = 'min';
+        } else {
+            n = Math.round(guessSeconds);
+            u = 'sec';
+        }
+
+        if (n != 1) u += 's';
+        return `${n} ${u} left`;
     }
 });
 
@@ -264,16 +310,11 @@ defineExpose({
     justify-self: center;
 }
 
-.info {
-    display: flex;
-    flex-flow: column nowrap;
-    row-gap: 4px;
-}
-
 .name {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+    margin-bottom: 4px;
 }
 
 .size {
