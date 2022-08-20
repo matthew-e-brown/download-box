@@ -26,7 +26,9 @@
             </button>
         </div>
 
-        <Transition name="popup"><div v-if="copiedPopup.visible">URL copied</div></Transition>
+        <Transition name="popup">
+            <div v-if="isCopiedPopupVisible" class="popup">URL copied</div>
+        </Transition>
     </main>
 </template>
 
@@ -111,8 +113,8 @@ const nextPage = async () => {
 }
 
 
-const copiedPopup = usePopup(3650);
-provide(showCopiedKey, copiedPopup.show);
+const { visible: isCopiedPopupVisible, show: showCopiedPopup } = usePopup(3650);
+provide(showCopiedKey, showCopiedPopup);
 
 
 const closeAllOverlays = (exceptId: number = -1) => {

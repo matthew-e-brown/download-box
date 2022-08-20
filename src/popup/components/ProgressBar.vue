@@ -42,12 +42,14 @@ interface Props {
     percentage: number,
 }
 
-// =================================================================================================
-
-const { percentage } = toRefs(withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
     gradientStart: 'white',
     gradientEnd: 'black',
-}));
+});
+
+// =================================================================================================
+
+const { percentage } = toRefs(props);
 
 const key = '0123456789abcdef'.replace(/./g, () => (~~(Math.random() * 16)).toString(16));
 

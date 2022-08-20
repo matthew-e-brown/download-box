@@ -104,10 +104,10 @@ import DownloadItem = downloads.DownloadItem;
 // =================================================================================================
 
 
-const { item, speedsMap } = toRefs(defineProps<{
+const props = defineProps<{
     item: DownloadItem,
     speedsMap?: DownloadSpeeds,
-}>());
+}>();
 
 const emit = defineEmits<{
     (e: 'erase', id: number): void,
@@ -115,6 +115,11 @@ const emit = defineEmits<{
     (e: 'overlay'): void,
 }>();
 
+
+// =================================================================================================
+
+
+const { item, speedsMap } = toRefs(props);
 const showCopied = inject(showCopiedKey);
 
 
