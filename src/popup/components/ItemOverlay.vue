@@ -2,6 +2,7 @@
     <div class="overlay button-row"><slot /></div>
 </template>
 
+
 <style lang="scss" scoped>
 .overlay {
     position: absolute;

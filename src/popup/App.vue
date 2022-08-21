@@ -1,5 +1,5 @@
 <template>
-    <main @click="closeAllOverlays(-1)" @click.right="closeAllOverlays(-1)">
+    <main @click="closeAllOverlays()" @click.right="closeAllOverlays()">
         <h1>Downloads</h1>
 
         <ul id="downloads-list" v-if="items.length > 0">
@@ -8,103 +8,36 @@
                 :key="i"
                 :item="item"
                 :speeds-map="itemSpeeds"
-                :ref="(el: any) => itemRefs[i] = el"
                 @erase="eraseItem"
                 @retry="retryItem"
-                @overlay="closeAllOverlays(i)"
+                @overlay="closeAllOverlays(item.id)"
+                ref="itemRefs"
             />
         </ul>
-        <div id="empty" v-else>There's nothing here...</div>
+        <div id="empty" v-else>There's nothing here&hellip;</div>
 
         <div id="page-buttons">
             <button id="prev-page" type="button" @click="prevPage">
-                <fa-icon icon="left" fixed-width />
+                <FaIcon icon="left" title="Previous page" fixed-width />
             </button>
             <div>Page {{ pageNumber }}</div>
             <button id="next-page" type="button" @click="nextPage">
-                <fa-icon icon="right" fixed-width />
+                <FaIcon icon="right" title="Next page" fixed-width />
             </button>
         </div>
 
         <Transition name="popup">
-            <div v-if="showCopiedPopup" class="popup">URL copied</div>
+            <div v-if="isCopiedPopupVisible" class="popup">URL copied</div>
         </Transition>
     </main>
 </template>
 
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted, onUnmounted, onBeforeUpdate, provide, Ref } from 'vue';
-import { search, getItemStartTime, DownloadSpeeds, Ping } from '@/common';
-import { popupKey } from './main';
-
-import downloads = chrome.downloads;
-import DownloadItem = downloads.DownloadItem;
-import DownloadQuery = downloads.DownloadQuery;
-import runtime = chrome.runtime;
-
-import Item from './components/Item.vue';
-
-
-const defaultSearchOptions: DownloadQuery = {
-    limit: 5,
-    filenameRegex: '.+',
-    orderBy: [ '-startTime' ],
-};
-
-
-function usePagination(items: Ref<DownloadItem[]>) {
-
-    /*
-     * To change pages, we perform a new search with a `startBefore` time. To move earlier in time
-     * to the next page, we search for everything before the earliest item on this page (if there
-     * are five items, search for everything before item five).
-     *
-     * To move backwards (more recently in time; from page two to one), we need to keep track of the
-     * `startTime`s of all of our previous pages. This stack holds those times (as ISO 8601 stamps).
-     */
-
-    const stack = ref<string[]>([ ]);
-    const pageNumber = computed(() => stack.value.length + 1);
-
-
-    const prevPage = async () => {
-        const startedBefore = stack.value.pop();
-
-        // Don't paginate if this is the first page
-        if (startedBefore === undefined) return;
-
-        items.value = await search({ ...defaultSearchOptions, startedBefore });
-    };
-
-
-    const nextPage = async () => {
-        const startedBefore = items.value[items.value.length - 1].startTime;
-        const newItems = await search({ ...defaultSearchOptions, startedBefore });
-
-        // Don't paginate if there are no earlier items
-        if (newItems.length) {
-            stack.value.push(getItemStartTime(items.value[0]));
-            items.value = newItems;
-        }
-    };
-
-
-    return {
-        pageNumber,
-        prevPage,
-        nextPage,
-    };
-}
-
-
 function usePopup(timeout: number) {
     const visible = ref(false);
 
-    const hide = () => {
-        visible.value = false;
-    }
-
+    const hide = () => visible.value = false;
     const show = () => {
         visible.value = true;
         setTimeout(hide, timeout);
@@ -113,104 +46,140 @@ function usePopup(timeout: number) {
     return { visible, show, hide };
 }
 
-
-export default defineComponent({
-    name: 'App',
-    components: { Item },
-    setup() {
-
-        // Connection to the backend
-        let port: runtime.Port | null = null;
-
-        const items = ref<DownloadItem[]>([ ]);
-        const pagination = usePagination(items);
-
-        const itemRefs = ref<InstanceType<typeof Item>[]>([ ]);
-        const itemSpeeds = ref<DownloadSpeeds>({ });
-
-        const copiedPopup = usePopup(3650);
-        provide(popupKey, copiedPopup.show);
+const defaultSearchOptions: DownloadQuery = Object.freeze({
+    limit: 5,
+    filenameRegex: '.+',
+    orderBy: [ '-startTime' ],
+});
+</script>
 
 
-        const closeAllOverlays = (exceptIndex: number) => {
-            itemRefs.value.forEach((item, i) => {
-                if (i != exceptIndex) item?.closeOverlay();
-            });
-        }
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted, provide } from 'vue';
+import { search, getItemStartTime, DownloadSpeeds, Ping } from '@/common';
+import { showCopiedKey } from './main';
+
+import { FontAwesomeIcon as FaIcon } from '@fortawesome/vue-fontawesome';
+import Item from './components/Item.vue';
+
+import downloads = chrome.downloads;
+import DownloadItem = downloads.DownloadItem;
+import DownloadQuery = downloads.DownloadQuery;
+import runtime = chrome.runtime;
 
 
-        const refresh = async () => {
-            items.value = await search({
-                ...defaultSearchOptions,
-                startedBefore: getItemStartTime(items.value[0])
-            });
-        }
+// =================================================================================================
 
 
-        const retryItem = (url: string) => downloads.download({ url });
+// Our connection to the backend
+let port: runtime.Port | null = null;
 
-        const eraseItem = async (toRemove: number) => {
-            // Remove the item
-            await new Promise(resolve => {
-                downloads.erase({ id: toRemove }, resolve);
-            });
-
-            /*
-             * We handle the `refresh()` call differently in this case because of the possibility
-             * that they cleared the first item on the page. Just calling `refresh` without taking
-             * care to check which one they deleted might cause some weirdness, since the time of
-             * the first item on the page is use in the `pageStack`.
-             *
-             * This is the same reason we don't have a downloads.onErased listener.
-             */
-
-            const deleted = items.value.findIndex(({ id }) => id == toRemove);
-            const startedBefore = getItemStartTime(items.value[deleted == 0 ? 1 : 0]);
-
-            items.value = await search({ ...defaultSearchOptions, startedBefore });
-            closeAllOverlays(-1);
-        }
+// The download items directly from Chrome's API
+const items = ref<DownloadItem[]>([ ]);
+const itemRefs = ref<InstanceType<typeof Item>[] | null>(null);
+const itemSpeeds = ref<DownloadSpeeds>();
 
 
-        const downloadHandler = () => refresh();
-        const onMessage = (message: Ping) => {
-            if (message.payload) itemSpeeds.value = message.payload;
-        }
+/*
+ * To change pages, we perform a new search with a `startBefore` time. To move earlier in time to
+ * the next page, we search for everything before the earliest item on this page (if there are five
+ * items, search for everything before item five).
+ *
+ * To move backwards (more recently in time; from page two to one), we need to keep track of the
+ * `startTime`s of all of our previous pages. This stack holds those times (as ISO 8601 stamps).
+ */
 
-        onMounted(() => {
-            port = runtime.connect();
-            port.onMessage.addListener(onMessage);
+const pageStack = ref<string[]>([ ]);
+const pageNumber = computed(() => pageStack.value.length + 1);
 
-            downloads.onCreated.addListener(downloadHandler);
-            downloads.onChanged.addListener(downloadHandler);
+const prevPage = async () => {
+    const startedBefore = pageStack.value.pop();
 
-            refresh();
-        });
-
-        onUnmounted(() => {
-            port?.onMessage.removeListener(onMessage);
-            port = null;
-
-            downloads.onCreated.removeListener(downloadHandler);
-            downloads.onChanged.removeListener(downloadHandler);
-        });
-
-        onBeforeUpdate(() => {
-            // Clear the itemRefs because they are re-added each render
-            itemRefs.value = [];
-        });
-
-        return {
-            items,
-            itemRefs,
-            itemSpeeds,
-            eraseItem,
-            retryItem,
-            closeAllOverlays,
-            ...pagination,
-            showCopiedPopup: copiedPopup.visible,
-        };
+    // Don't paginate if this is the first page
+    if (startedBefore) {
+        items.value = await search({ ...defaultSearchOptions, startedBefore });
     }
+}
+
+const nextPage = async () => {
+    const startedBefore = items.value[items.value.length - 1].startTime;
+    const newItems = await search({ ...defaultSearchOptions, startedBefore });
+
+    // Don't paginate if there are no earlier items
+    if (newItems.length) {
+        pageStack.value.push(getItemStartTime(items.value[0]));
+        items.value = newItems;
+    }
+}
+
+
+const { visible: isCopiedPopupVisible, show: showCopiedPopup } = usePopup(3650);
+provide(showCopiedKey, showCopiedPopup);
+
+
+const closeAllOverlays = (exceptId: number = -1) => {
+    if (!itemRefs.value) return;
+
+    for (const item of itemRefs.value) {
+        if (item.itemId != exceptId) item.closeOverlay();
+    }
+}
+
+
+const refresh = async () => {
+    items.value = await search({
+        ...defaultSearchOptions,
+        startedBefore: getItemStartTime(items.value[0]),
+    });
+}
+
+
+const retryItem = (url: string) => downloads.download({ url });
+
+const eraseItem = async (toRemove: number) => {
+    // Actually remove the item before we refresh
+    await downloads.erase({ id: toRemove });
+
+    /*
+     * We handle the `refresh()` call differently in this case because of the possibility
+     * that they cleared the first item on the page. Just calling `refresh` without taking
+     * care to check which one they deleted might cause some weirdness, since the time of
+     * the first item on the page is use in the `pageStack`.
+     *
+     * This is the same reason we don't have a downloads.onErased listener.
+     */
+
+    const delIndex = items.value.findIndex(({ id }) => id == toRemove);
+    const startedBefore = getItemStartTime(items.value[delIndex == 0 ? 1 : 0]);
+
+    items.value = await search({ ...defaultSearchOptions, startedBefore });
+    closeAllOverlays();
+}
+
+
+const onDownloadHandler = () => refresh();
+const onMessageHandler = (message: Ping) => {
+    if (message.payload) itemSpeeds.value = message.payload;
+    refresh();
+}
+
+
+onMounted(() => {
+    port = runtime.connect();
+    port.onMessage.addListener(onMessageHandler);
+
+    downloads.onCreated.addListener(onDownloadHandler);
+    downloads.onChanged.addListener(onDownloadHandler);
+
+    refresh();
+});
+
+onUnmounted(() => {
+    port?.onMessage.removeListener(onMessageHandler);
+    port = null;
+
+    downloads.onCreated.removeListener(onDownloadHandler);
+    downloads.onChanged.removeListener(onDownloadHandler);
 });
 </script>
 

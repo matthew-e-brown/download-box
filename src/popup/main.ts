@@ -2,7 +2,6 @@ import App from './App.vue';
 import { createApp, InjectionKey } from 'vue';
 
 import { library } from '@fortawesome/fontawesome-svg-core';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 import 'normalize.css';
 import '@fontsource/atkinson-hyperlegible/400.css';
@@ -33,9 +32,7 @@ library.add(
 );
 
 
-export const popupKey = Symbol('Popup') as InjectionKey<() => void>;
+export const showCopiedKey = Symbol('Popup') as InjectionKey<() => void>;
 
 
-export default createApp(App)
-    .component('fa-icon', FontAwesomeIcon)
-    .mount('#app');
+export default createApp(App).mount('#app');

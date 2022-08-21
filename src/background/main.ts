@@ -92,32 +92,38 @@ class DownloadManager {
      * @param delta The change from the Chrome API.
      */
     private async onDownloadChanged(delta: DownloadDelta) {
-        // If it was the state that changed...
+        // Trigger when the state of any downloads change
         if (delta.state !== undefined) {
+            const error = delta.error;
             const state = delta.state.current;
-            // ...and the state completed, push to the list
-            if (state == 'interrupted' || state == 'complete') {
+
+            // Trigger when the download is either completed or interrupted, but not cancelled
+            if ((state == 'interrupted' || state == 'complete') && error != 'USER_CANCELED') {
                 const [ item ] = await search({ id: delta.id });
 
-                // If the popup is not open, push to the unchecked list
-                if (this.port === null) {
-                    this.unchecked.push(item);
-                }
+                if (item) {
+                    // If the popup is not open, push to the unchecked list to make the icon green
+                    if (this.port === null) {
+                        this.unchecked.push(item);
+                    }
 
-                this.speeds.delete(item.id);
+                    // Stop tracking the speed of this item
+                    this.speeds.delete(item.id);
+                }
             }
         }
 
-        // In all other cases, simply draw the icon again
+        // In all cases, draw the icon again
         await this.drawIcon();
     }
 
 
     /**
-     * Pings the popup to refresh.
+     * Pings the popup to refresh and redraws the icon.
      */
     private onDownloadErased() {
         this.port?.postMessage({ });
+        this.drawIcon();
     }
 
 

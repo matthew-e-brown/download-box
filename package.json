@@ -1,7 +1,7 @@
 {
   "name": "download-box",
-  "description": "Replace Chrome's downloads shelf with a popup menu to manage your downloads",
-  "version": "1.1.2",
+  "description": "Replace Chrome's downloads shelf with a popup menu to manage your downloads.",
+  "version": "1.2.0",
   "author": "Matthew Brown <matthew.e.brown.17@gmail.com>",
   "license": "GPL-3.0-or-later",
   "repository": {
@@ -9,7 +9,7 @@
     "url": "https://github.com/matthew-e-brown/download-box.git"
   },
   "scripts": {
-    "build": "webpack --mode production",
+    "build": "webpack --mode production && rm dist/popup.js.LICENSE.txt",
     "watch": "webpack --mode development --watch"
   },
   "devDependencies": {
