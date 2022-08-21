@@ -62,13 +62,13 @@ class PromiseQueue {
         // Run the current promise
         this.waiting = true;
         item.promiseRunner()
-        .then(item.resolve)
-        .catch(item.reject)
-        .finally(() => {
-            // Attempt to run the next one
-            this.waiting = false;
-            this.dequeue();
-        });
+            .then(item.resolve)
+            .catch(item.reject)
+            .finally(() => {
+                // Attempt to run the next one
+                this.waiting = false;
+                this.dequeue();
+            });
     }
 
 }
