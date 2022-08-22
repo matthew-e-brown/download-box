@@ -14,14 +14,26 @@
                 ref="itemRefs"
             />
         </ul>
-        <div id="empty" v-else>There's nothing here&hellip;</div>
+        <div id="empty" v-else>
+            <span>Files you download will appear here.</span>
+        </div>
 
         <div id="page-buttons">
-            <button id="prev-page" type="button" @click="prevPage">
+            <button
+                id="prev-page"
+                type="button"
+                @click="prevPage"
+                :disabled="pageNumber == 1"
+            >
                 <FaIcon icon="left" title="Previous page" fixed-width />
             </button>
             <div>Page {{ pageNumber }}</div>
-            <button id="next-page" type="button" @click="nextPage">
+            <button
+                id="next-page"
+                type="button"
+                @click="nextPage"
+                :disabled="pageNumber >= Math.ceil(totalItems / 5)"
+            >
                 <FaIcon icon="right" title="Next page" fixed-width />
             </button>
         </div>
@@ -78,6 +90,8 @@ let port: runtime.Port | null = null;
 const items = ref<DownloadItem[]>([ ]);
 const itemRefs = ref<InstanceType<typeof Item>[] | null>(null);
 const itemSpeeds = ref<DownloadSpeeds>();
+
+const totalItems = ref(5);
 
 
 /*
@@ -139,6 +153,7 @@ const retryItem = (url: string) => downloads.download({ url });
 const eraseItem = async (toRemove: number) => {
     // Actually remove the item before we refresh
     await downloads.erase({ id: toRemove });
+    totalItems.value -= 1;
 
     /*
      * We handle the `refresh()` call differently in this case because of the possibility
@@ -164,7 +179,7 @@ const onMessageHandler = (message: Ping) => {
 }
 
 
-onMounted(() => {
+onMounted(async () => {
     port = runtime.connect();
     port.onMessage.addListener(onMessageHandler);
 
@@ -172,6 +187,13 @@ onMounted(() => {
     downloads.onChanged.addListener(onDownloadHandler);
 
     refresh();
+
+    // Because the pool from which the downloads API lets us search through doesn't update until the
+    // popup is re-opened, we can get away with setting this value only once.
+    totalItems.value = (await search({
+        ...defaultSearchOptions,
+        limit: 0,
+    })).length;
 });
 
 onUnmounted(() => {
@@ -187,6 +209,7 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 main {
     padding-top: 1rem;
+    padding-bottom: 1px;
     position: relative;
 }
 
@@ -203,6 +226,16 @@ ul {
     list-style: none;
     margin: 0;
     padding: 0;
+}
+
+ul, #empty {
+    height: 375px;
+}
+
+#empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #page-buttons {
@@ -236,6 +269,16 @@ ul {
 
         height: 38px;
         cursor: pointer;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &[disabled] {
+            color: var(--main-fg-dim);
+            cursor: default;
+            &:hover { border-color: transparent; }
+        }
     }
 }
 
