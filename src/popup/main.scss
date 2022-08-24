@@ -29,11 +29,15 @@ body {
     $yellow-40: hsl(60, 77%, 41%);
     $yellow-50: hsl(60, 100%, 50%);
 
+    $white: hsl(0, 0%, 98%);
+    $black: hsl(0, 0%, 13%);
+    $gray: hsl(0, 0%, 51%);
+
     // Light theme:
 
-    --main-bg: hsl(0, 0%, 98%);
-    --main-fg: hsl(0, 0%, 13%);
-    --main-fg-dim: hsl(0, 0%, 51%);
+    --main-bg: #{$white};
+    --main-fg: #{$black};
+    --main-fg-dim: #{$gray};
 
     --item-bg1: hsl(0, 0%, 94%);
     --item-bg2: hsl(0, 0%, 90%);
@@ -55,12 +59,13 @@ body {
     --button-pages-border: #{$blue-40};
 
     --overlay-bg: var(--main-bg);
+    --confirm-bg: hsla(0, 0%, 98%, 90%);
 
     // Dark theme:
 
     @media (prefers-color-scheme: dark) {
-        --main-bg: hsl(0, 0%, 13%);
-        --main-fg: hsl(0, 0%, 98%);
+        --main-bg: #{$black};
+        --main-fg: #{$white};
 
         --item-bg1: hsl(0, 0%, 9%);
         --item-bg2: hsl(0, 0%, 16%);
@@ -82,6 +87,7 @@ body {
         --button-pages-border: #{$blue-20};
 
         --overlay-bg: black;
+        --confirm-bg: hsla(0, 0%, 0%, 90%);
     }
 
     // Don't change with theme:
@@ -89,7 +95,13 @@ body {
     --button-warning-fg: white;
     --button-warning-bg: #{$red-50};
     --button-warning-border: #{$red-20};
+}
 
+
+// Defaults
+button {
+    --button-color: var(--button-items-bg);
+    --border-color: var(--button-items-border);
 }
 
 
@@ -115,7 +127,6 @@ button.icon-button {
 
 
 .button-row {
-
     display: flex;
     flex-flow: row nowrap;
     justify-content: flex-end;
@@ -123,7 +134,11 @@ button.icon-button {
 
     button {
         margin: 0;
-        --button-color: var(--button-items-bg);
-        --border-color: var(--button-items-border);
     }
+}
+
+.danger-button {
+    color: var(--button-warning-fg);
+    --button-color: var(--button-warning-bg);
+    --border-color: var(--button-warning-border);
 }

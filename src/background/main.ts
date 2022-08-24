@@ -71,7 +71,8 @@ class DownloadManager {
             this.port = null;
         });
 
-        // Clear the unchecked downloads and re-draw the icon
+        // Clear the unchecked downloads and re-draw the icon, since the popup was just opened we
+        // may consider them checked.
         this.unchecked = [ ];
         this.drawIcon();
     }
@@ -92,25 +93,14 @@ class DownloadManager {
      * @param delta The change from the Chrome API.
      */
     private async onDownloadChanged(delta: DownloadDelta) {
-        // Trigger when the state of any downloads change
-        if (delta.state !== undefined) {
-            const error = delta.error;
-            const state = delta.state.current;
+        const state = delta.state?.current;
+        const [ item ] = await search({ id: delta.id });
 
-            // Trigger when the download is either completed or interrupted, but not cancelled
-            if ((state == 'interrupted' || state == 'complete') && error != 'USER_CANCELED') {
-                const [ item ] = await search({ id: delta.id });
-
-                if (item) {
-                    // If the popup is not open, push to the unchecked list to make the icon green
-                    if (this.port === null) {
-                        this.unchecked.push(item);
-                    }
-
-                    // Stop tracking the speed of this item
-                    this.speeds.delete(item.id);
-                }
-            }
+        // If this download was either interrupted, completed, but was not canceled
+        if ((state === 'interrupted' || state === 'complete') && delta.error !== 'USER_CANCELED' && item) {
+            // If the popup isn't open, push it into the unchecked list
+            if (this.port === null) this.unchecked.push(item);
+            this.speeds.delete(item.id);
         }
 
         // In all cases, draw the icon again
@@ -203,21 +193,25 @@ class DownloadManager {
 
         // Determine the colour to draw
         const color = (() => {
-            // First priority: check if any of the freshly completed items errored-out (excluding
-            // those cancelled by the user).
+            // First priority: check if any in-progress downloads are dangerous
+            if (activeDownloads.some(d => !(d.danger == 'safe' || d.danger == 'accepted')))
+                return Color.Error;
+
+            // Second: check if any of the freshly completed items errored-out (excluding those
+            // cancelled by the user).
             if (this.unchecked.some(d => d.state == 'interrupted' && !d.error?.startsWith('USER_')))
-            return Color.Error;
+                return Color.Error;
 
-            // Second: check if any of the currently active items are paused.
+            // Third: check if any of the currently active items are paused.
             if (activeDownloads.some(item => item.paused))
-            return Color.Paused;
+                return Color.Paused;
 
-            // Third: check if any of the freshly completed items were successful.
+            // Fourth: check if any of the freshly completed items were successful.
             if (this.unchecked.some(c => c.state == 'complete'))
-            return Color.Complete;
+                return Color.Complete;
 
             // Otherwise, just use the normal color.
-            return Color.Normal;
+                return Color.Normal;
         })();
 
         // If anything is actually downloading at the moment, check the total percentage

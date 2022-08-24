@@ -48,6 +48,12 @@
             ><FaIcon icon="arrow-rotate-left" fixed-width /></button>
             <button
                 type="button"
+                class="icon-button danger-button"
+                v-else-if="isDangerous"
+                @click.stop="acceptDanger"
+            ><FaIcon icon="triangle-exclamation" fixed-width /></button>
+            <button
+                type="button"
                 class="icon-button"
                 v-else-if="shouldShowFolder"
                 @click.stop="showFile"
@@ -90,7 +96,7 @@
                 <!-- Erase button -->
                 <button
                     type="button"
-                    class="icon-button erase-button"
+                    class="icon-button danger-button"
                     @click="eraseFromList"
                 ><fa-icon icon="xmark" fixed-width /></button>
             </ItemOverlay>
@@ -125,6 +131,8 @@ const emit = defineEmits<{
     (e: 'erase', id: number): void,
     (e: 'retry', url: string): void,
     (e: 'overlay'): void,
+    (e: 'accept-begin'): void,
+    (e: 'accept-finish'): void,
 }>();
 
 
@@ -159,10 +167,22 @@ const openOverlay = () => {
 }
 
 
+// If the file will have to be accepted first
+const isDangerous = computed(() => !(item.value.danger == 'safe' || item.value.danger == 'accepted'));
+const acceptDanger = async () => {
+    emit('accept-begin');
+    // Opens the confirm modal and resolves when they click an option
+    await downloads.acceptDanger(item.value.id);
+    emit('accept-finish');
+}
+
+
 const barColor = computed<{ start: string, end: string }>(() => {
     let cssVarName;
 
-    if (item.value.paused) {
+    if (isDangerous.value) {
+        cssVarName = 'error';
+    } else if (item.value.paused) {
         cssVarName = 'paused';
     } else if (item.value.state == 'interrupted') {
         cssVarName = 'error';
@@ -261,7 +281,8 @@ const timeRemaining = computed(() => {
 });
 
 // Defaults to a blank, 1x1, transparent `.gif` file (placeholder)
-const icon = ref('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+const blank = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+const icon = ref(blank);
 
 // Use a `watch` instead of a regular `computed` because `getFileIcon` is asynchronous
 watch(() => item.value.id, async () => {
@@ -269,7 +290,7 @@ watch(() => item.value.id, async () => {
         downloads.getFileIcon(item.value.id, { size: 32 }, resolve);
     });
 
-    if (src) icon.value = src;
+    icon.value = src || blank;
 }, { immediate: true });
 
 
@@ -326,12 +347,6 @@ defineExpose({
 
 .dot {
     opacity: 0.75;
-}
-
-.erase-button {
-    color: var(--button-warning-fg);
-    --button-color: var(--button-warning-bg);
-    --border-color: var(--button-warning-border);
 }
 
 .error {

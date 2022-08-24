@@ -4,13 +4,15 @@
 
         <ul id="downloads-list" v-if="items.length > 0">
             <Item
-                v-for="(item, i) in items"
-                :key="i"
+                v-for="item in items"
+                :key="item.id"
                 :item="item"
                 :speeds-map="itemSpeeds"
                 @erase="eraseItem"
                 @retry="retryItem"
                 @overlay="closeAllOverlays(item.id)"
+                @accept-begin="showShroud = true"
+                @accept-finish="showShroud = false"
                 ref="itemRefs"
             />
         </ul>
@@ -40,6 +42,12 @@
 
         <Transition name="popup">
             <div v-if="isCopiedPopupVisible" class="popup">URL copied</div>
+        </Transition>
+
+        <Transition name="fade-in">
+            <div id="accept-shroud" v-if="showShroud">
+                <!-- Shrouds the popup so the built-in "accept this download?" popup is more easily visible -->
+            </div>
         </Transition>
     </main>
 </template>
@@ -93,6 +101,7 @@ const itemSpeeds = ref<DownloadSpeeds>();
 
 const totalItems = ref(5);
 
+const showShroud = ref(false);
 
 /*
  * To change pages, we perform a new search with a `startBefore` time. To move earlier in time to
@@ -282,6 +291,13 @@ ul, #empty {
     }
 }
 
+#accept-shroud {
+    inset: -2px;
+    position: fixed;
+    background-color: hsla(0, 0%, 0%, 0.10);
+    backdrop-filter: blur(10px);
+}
+
 .popup {
     position: absolute;
     top: 12px;
@@ -304,4 +320,12 @@ ul, #empty {
 
 .popup-enter-from, .popup-leave-to { transform: translateX(-120%); }
 .popup-enter-to, .popup-leave-from { transform: translateX(0); }
+
+
+.fade-in-enter-active, .fade-in-leave-active {
+    transition: opacity 125ms linear;
+}
+
+.fade-in-enter-from, .fade-in-leave-to { opacity: 0; }
+.fade-in-enter-to, .fade-in-leave-from { opacity: 1; }
 </style>

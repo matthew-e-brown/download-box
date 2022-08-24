@@ -18,6 +18,7 @@ import {
     faPause,
     faXmark,
     faLink,
+    faTriangleExclamation,
 } from '@fortawesome/pro-solid-svg-icons';
 
 library.add(
@@ -29,6 +30,7 @@ library.add(
     faPause,
     faXmark,
     faLink,
+    faTriangleExclamation,
 );
 
 
