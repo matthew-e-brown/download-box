@@ -1,7 +1,7 @@
 {
   "name": "download-box",
   "description": "Replace Chrome's downloads shelf with a popup menu to manage your downloads.",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "author": "Matthew Brown <matthew.e.brown.17@gmail.com>",
   "license": "GPL-3.0-or-later",
   "repository": {
