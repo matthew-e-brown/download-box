@@ -57,9 +57,9 @@ const pathMask = computed(() => {
     // https://yqnn.github.io/svg-path-editor/
     if (percentage.value == 0) return 'M 0 0 Z';
     else {
-        // SVG's viewport is 440 to get the right ratio, then shaped with CSS afterwards.
-        // Hence the 440 multiple.
-        const width = percentage.value * 440;
+        // SVG's viewport is 460 to get the right ratio, then shaped with CSS afterwards.
+        // Hence the 460 multiple.
+        const width = percentage.value * 460;
         return `m 0 0 l ${width} 0 a 1 1 0 0 1 0 5 L 0 5 z`;
     }
 });
