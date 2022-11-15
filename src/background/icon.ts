@@ -97,7 +97,7 @@ export class Icon {
 
     public constructor() {
         this.canvas = new OffscreenCanvas(160, 160);
-        this.context = this.canvas.getContext('2d')!;
+        this.context = this.canvas.getContext('2d', { willReadFrequently: true })!;
         this.queue = new PromiseQueue();
     }
 
